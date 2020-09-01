@@ -6,19 +6,47 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-typedef struct servidor {
+typedef struct _servidor {
     int servidor_socket;
     struct sockaddr_in cfg_servidor;
 } Servidor;
 
-
-typedef struct cliente {
+typedef struct _cliente {
     char *IP;
     uint16_t PORTA;
     int cliente_socket;
     char mensagem_cliente[4096];
     struct sockaddr_in cfg_cliente;
 } Cliente;
+
+void criar_socket(Servidor *servidor);
+
+void configurar_servidor(Servidor *servidor, uint16_t PORTA);
+
+void enviar_resposta(Cliente *cliente);
+
+void receber_resposta(Cliente *cliente);
+
+void aceitar_conexoes(Servidor *servidor, Cliente *cliente);
+
+int main(int argc, char *argv[]) {
+
+    Servidor s1;
+    Cliente c1;
+
+    if (argc != 2) {
+        printf("./<PROGRAMA> <PORTA_SERVIDOR>");
+        exit(EXIT_FAILURE);
+    }
+
+    criar_socket(&s1);
+
+    configurar_servidor(&s1, (uint16_t) atoi(argv[1]));
+
+    aceitar_conexoes(&s1, &c1);
+
+    return EXIT_SUCCESS;
+}
 
 void criar_socket(Servidor *servidor) {
     servidor->servidor_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -83,23 +111,4 @@ void aceitar_conexoes(Servidor *servidor, Cliente *cliente) {
         printf("Erro ao aceitar conexões\n");
         exit(EXIT_FAILURE);
     }
-}
-
-int main(int argc, char *argv[]) {
-
-    Servidor s1;
-    Cliente c1;
-
-    if (argc != 2) {
-        printf("./<PROGRAMA> <PORTA_SERVIDOR>");
-        exit(EXIT_FAILURE);
-    }
-
-    criar_socket(&s1);
-
-    configurar_servidor(&s1, (uint16_t) atoi(argv[1]));
-
-    aceitar_conexoes(&s1, &c1);
-
-    return EXIT_SUCCESS;
 }

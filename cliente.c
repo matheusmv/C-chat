@@ -6,16 +6,50 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-typedef struct servidor {
+typedef struct _servidor {
     struct sockaddr_in cfg_servidor;
     char *IP_SERVIDOR;
     uint16_t PORTA;
 } Servidor;
 
-
-typedef struct cliente {
+typedef struct _cliente {
     int cliente_socket;
 } Cliente;
+
+void criar_socket(Cliente *cliente);
+
+void conectar(Cliente *cliente, Servidor *servidor, char *IP, uint16_t PORTA);
+
+void enviar_mensagem(Cliente *cliente);
+
+void receber_mensagem(Cliente *cliente);
+
+void fechar_conexao(Cliente *cliente);
+
+int main(int argc, char *argv[]) {
+
+    Cliente c1;
+    Servidor s1;
+
+
+    if (argc != 3) {
+        printf("./<PROGRAMA> <IP_SERVIDOR> <PORTA>\n");
+        exit(EXIT_FAILURE);
+    }
+
+    criar_socket(&c1);
+
+    conectar(&c1, &s1, argv[1], (uint16_t) atoi(argv[2]));
+
+    while (1) {
+        enviar_mensagem(&c1);
+        receber_mensagem(&c1);
+    }
+
+    fechar_conexao(&c1);
+
+    return EXIT_SUCCESS;
+}
 
 void criar_socket(Cliente *cliente) {
     cliente->cliente_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -28,7 +62,7 @@ void criar_socket(Cliente *cliente) {
     printf("Socket criado\n");
 }
 
-void _configura_servidor(Servidor *servidor, char *IP, uint16_t PORTA) {
+void configura_servidor(Servidor *servidor, char *IP, uint16_t PORTA) {
     servidor->IP_SERVIDOR = IP;
     servidor->PORTA = PORTA;
     servidor->cfg_servidor.sin_addr.s_addr = inet_addr(IP);
@@ -37,7 +71,7 @@ void _configura_servidor(Servidor *servidor, char *IP, uint16_t PORTA) {
 }
 
 void conectar(Cliente *cliente, Servidor *servidor, char *IP, uint16_t PORTA) {
-    _configura_servidor(servidor, IP, PORTA);
+    configura_servidor(servidor, IP, PORTA);
 
     if (connect(cliente->cliente_socket, (struct sockaddr *) &servidor->cfg_servidor, sizeof(servidor->cfg_servidor)) < 0) {
         printf("Erro ao tentar conectar-se com o servidor\n");
@@ -76,28 +110,4 @@ void receber_mensagem(Cliente *cliente) {
 
 void fechar_conexao(Cliente *cliente) {
     close(cliente->cliente_socket);
-}
-
-int main(int argc, char *argv[]) {
-
-    Cliente c1;
-    Servidor s1;
-
-    if (argc != 3) {
-        printf("./<PROGRAMA> <IP_SERVIDOR> <PORTA>\n");
-        exit(EXIT_FAILURE);
-    }
-
-    criar_socket(&c1);
-
-    conectar(&c1, &s1, argv[1], (uint16_t) atoi(argv[2]));
-
-    while (1) {
-        enviar_mensagem(&c1);
-        receber_mensagem(&c1);
-    }
-
-    fechar_conexao(&c1);
-
-    return EXIT_SUCCESS;
 }
