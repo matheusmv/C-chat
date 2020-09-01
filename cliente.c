@@ -23,24 +23,26 @@ void criar_socket(Cliente *cliente) {
 
     if (cliente->cliente_socket == -1) {
         printf("Erro ao criar o socket\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     printf("Socket criado\n");
 }
 
 void _configura_servidor(Servidor *servidor, char *IP, uint16_t PORTA) {
+    servidor->IP_SERVIDOR = IP;
+    servidor->PORTA = PORTA;
     servidor->cfg_servidor.sin_addr.s_addr = inet_addr(IP);
     servidor->cfg_servidor.sin_family = AF_INET;
     servidor->cfg_servidor.sin_port = htons(PORTA);
 }
 
-void conectar(Cliente *cliente, Servidor *servidor) {
-    _configura_servidor(servidor, servidor->IP_SERVIDOR, servidor->PORTA);
+void conectar(Cliente *cliente, Servidor *servidor, char *IP, uint16_t PORTA) {
+    _configura_servidor(servidor, IP, PORTA);
 
     if (connect(cliente->cliente_socket, (struct sockaddr *) &servidor->cfg_servidor, sizeof(servidor->cfg_servidor)) < 0) {
         printf("Erro ao tentar conectar-se com o servidor\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     printf("Conectado com sucesso!\n");
@@ -51,7 +53,7 @@ void enviar(Cliente *cliente) {
     
     if (send(cliente->cliente_socket, mensagem, strlen(mensagem), 0) < 0) {
         printf("Erro ao enviar mensagem\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     printf("Mensagem enviada!\n");
@@ -78,15 +80,12 @@ int main(int argc, char *argv[]) {
 
     if (argc != 3) {
         printf("./<PROGRAMA> <IP_SERVIDOR> <PORTA>\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     criar_socket(&c1);
 
-    s1.IP_SERVIDOR = argv[1];
-    s1.PORTA = (uint16_t) atoi(argv[2]);
-
-    conectar(&c1, &s1);
+    conectar(&c1, &s1, argv[1], (uint16_t) atoi(argv[2]));
 
     enviar(&c1);
 
@@ -94,5 +93,5 @@ int main(int argc, char *argv[]) {
 
     fechar_conexao(&c1);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
