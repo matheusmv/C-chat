@@ -16,6 +16,7 @@ typedef struct cliente {
     char *IP;
     uint16_t PORTA;
     int cliente_socket;
+    char mensagem_cliente[4096];
     struct sockaddr_in cfg_cliente;
 } Cliente;
 
@@ -50,6 +51,21 @@ void enviar_resposta(Cliente *cliente) {
     write(cliente->cliente_socket, mensagem, strlen(mensagem));
 }
 
+void receber_resposta(Cliente *cliente) {
+    int len;
+    while((len = recv(cliente->cliente_socket, cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente), 0)) > 0) {
+        printf("Mensagem do cliente:\n");
+        printf("[%s:%d]%s\n", cliente->IP, cliente->PORTA, cliente->mensagem_cliente);
+    }
+
+    if (len == 0) {
+        printf("Cliente desconectado\n");
+        fflush(stdout);
+    } else if (len == -1) {
+        printf("Falha ao receber mensagem\n");
+    }
+}
+
 void aceitar_conexoes(Servidor *servidor, Cliente *cliente) {
     int len = sizeof(struct sockaddr_in);
     
@@ -61,6 +77,8 @@ void aceitar_conexoes(Servidor *servidor, Cliente *cliente) {
         printf("IP: %s PORTA: %d\n", cliente->IP, cliente->PORTA);
 
         enviar_resposta(cliente);
+        
+        receber_resposta(cliente);
     }
 
     if (cliente->cliente_socket < 0) {
