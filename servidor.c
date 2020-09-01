@@ -47,21 +47,21 @@ void configurar_servidor(Servidor *servidor, uint16_t PORTA) {
 }
 
 void enviar_resposta(Cliente *cliente) {
-    char *mensagem = "Olá, eu recebi sua conexão. Adeus.\n";
-    write(cliente->cliente_socket, mensagem, strlen(mensagem));
+    send(cliente->cliente_socket, cliente->mensagem_cliente, strlen(cliente->mensagem_cliente), 0);
 }
 
 void receber_resposta(Cliente *cliente) {
     int len;
     while((len = recv(cliente->cliente_socket, cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente), 0)) > 0) {
         printf("Mensagem do cliente:\n");
-        printf("[%s:%d]%s\n", cliente->IP, cliente->PORTA, cliente->mensagem_cliente);
+        printf("[%s:%d] %s\n", cliente->IP, cliente->PORTA, cliente->mensagem_cliente);
+        enviar_resposta(cliente);
+        bzero(cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente));
     }
 
     if (len == 0) {
-        printf("Cliente desconectado\n");
+        printf("Cliente desconectado - IP: %s PORTA: %d\n", cliente->IP, cliente->PORTA);
         close(cliente->cliente_socket);
-        fflush(stdout);
     } else if (len == -1) {
         printf("Falha ao receber mensagem\n");
     }
@@ -74,11 +74,8 @@ void aceitar_conexoes(Servidor *servidor, Cliente *cliente) {
         cliente->IP = inet_ntoa(cliente->cfg_cliente.sin_addr);
         cliente->PORTA = ntohs(cliente->cfg_cliente.sin_port);
 
-        printf("Conexão bem sucedida\n");
-        printf("IP: %s PORTA: %d\n", cliente->IP, cliente->PORTA);
+        printf("Conexão bem sucedida - IP: %s PORTA: %d\n", cliente->IP, cliente->PORTA);
 
-        enviar_resposta(cliente);
-        
         receber_resposta(cliente);
     }
 

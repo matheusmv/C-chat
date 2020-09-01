@@ -17,7 +17,6 @@ typedef struct cliente {
     int cliente_socket;
 } Cliente;
 
-
 void criar_socket(Cliente *cliente) {
     cliente->cliente_socket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -48,25 +47,31 @@ void conectar(Cliente *cliente, Servidor *servidor, char *IP, uint16_t PORTA) {
     printf("Conectado com sucesso!\n");
 }
 
-void enviar(Cliente *cliente) {
-    char *mensagem = "GET / HTTP/1.1\r\n\r\n";
-    
+void enviar_mensagem(Cliente *cliente) {
+    char mensagem[4096];
+
+    bzero(mensagem, sizeof(mensagem));
+
+    printf("Msg > ");
+    fgets(mensagem, sizeof(mensagem), stdin);
+
     if (send(cliente->cliente_socket, mensagem, strlen(mensagem), 0) < 0) {
         printf("Erro ao enviar mensagem\n");
-        exit(EXIT_FAILURE);
     }
 
     printf("Mensagem enviada!\n");
 }
 
-void ler_mensagem(Cliente *cliente) {
+void receber_mensagem(Cliente *cliente) {
     char resposta_servidor[4096];
+
     if (recv(cliente->cliente_socket, resposta_servidor, sizeof(resposta_servidor), 0) < 0) {
         printf("Falha ao recebem mensagem do servidor\n");
     }
 
-    printf("Mensagem do servidor: \n\n");
-    puts(resposta_servidor);
+    printf("Mensagem do servidor: ");
+    printf("%s\n", resposta_servidor);
+    bzero(resposta_servidor, sizeof(resposta_servidor));
 }
 
 void fechar_conexao(Cliente *cliente) {
@@ -87,9 +92,10 @@ int main(int argc, char *argv[]) {
 
     conectar(&c1, &s1, argv[1], (uint16_t) atoi(argv[2]));
 
-    enviar(&c1);
-
-    ler_mensagem(&c1);
+    while (1) {
+        enviar_mensagem(&c1);
+        receber_mensagem(&c1);
+    }
 
     fechar_conexao(&c1);
 
