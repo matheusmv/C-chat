@@ -7,7 +7,7 @@ Implementação de uma aplicação de chat utilizando sockets na linguagem de pr
 - [x] Implementar estrutura/operações básicas do servidor.
 - [x] Connect persistente (Cliente).
 - [x] Accept persistente (Servidor).
-- [ ] Implementar gerenciamento de multiplas conexões (Servidor).
+- [x] Implementar gerenciamento de multiplas conexões (Servidor).
 - [ ] Implementar etapa de identificação/autenticação cliente -> servidor (Cliente/Servidor).
 - [ ] Implementar gerenciamento de informações dos clientes (Servidor).
 - [ ] Implementar direcionamento de mensagens cliente -> servidor -> cliente (Servidor).
