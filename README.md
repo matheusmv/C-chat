@@ -1,6 +1,19 @@
 # chat-client-server-c-programming
 Implementação de uma aplicação de chat utilizando sockets na linguagem de programação C para Linux/Unix.
 
+## Executando o programa
+
+- [gcc](https://gcc.gnu.org/)
+- [make](https://www.gnu.org/software/make/)
+
+### Cliente
+      - make client
+      - ./cliente/cliente <IP-SERVIDOR> <PORTA>
+
+### Servidor
+      - make server
+      - ./servidor/servidor <PORTA>
+
 ## Progresso (Arquitetura do Sistema)
 
 - [x] Implementar estrutura/operações básicas do cliente.
