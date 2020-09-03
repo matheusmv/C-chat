@@ -6,6 +6,20 @@
 #include <unistd.h>
 #include <pthread.h>
 
+#define MAX_CONEXOES 10
+
+Cliente clientes[MAX_CONEXOES];
+
+void inicializar_clientes(Cliente *);
+
+void registrar_cliente(Cliente *);
+
+void listar_clientes(Cliente *);
+
+char dados_cliente(Cliente *);
+
+void enviar_mensagem_publica(int, char *);
+
 void criar_socket(Servidor *servidor) {
     servidor->servidor_socket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -29,7 +43,7 @@ void configurar_servidor(Servidor *servidor, uint16_t PORTA) {
 
     printf("Servidor rodando na porta %d\n", PORTA);
 
-    listen(servidor->servidor_socket, 10);
+    listen(servidor->servidor_socket, 0);
 }
 
 void enviar_resposta(Cliente *cliente) {
@@ -41,11 +55,14 @@ void* funcao_servidor(void *argumento) {
     int addr_len = sizeof(struct sockaddr_in);
     int len;
 
+    char *listar = "listar\r\n";
+
     while (1) {
         len = recv(cliente.cliente_socket, cliente.mensagem_cliente, sizeof(cliente.mensagem_cliente), 0);
 
         if (len == 0) {
             printf("Cliente desconectado - IP: %s PORTA: %d\n", cliente.IP, cliente.PORTA);
+            bzero(cliente.mensagem_cliente, sizeof(cliente.mensagem_cliente));
             close(cliente.cliente_socket);
             return NULL;
         } else if (len == -1) {
@@ -53,9 +70,15 @@ void* funcao_servidor(void *argumento) {
             return NULL;
         }
 
-        printf("Mensagem do cliente: ");
-        printf("[%s:%d] %s\n", cliente.IP, cliente.PORTA, cliente.mensagem_cliente);
-        enviar_resposta(&cliente);
+        if (strcmp(cliente.mensagem_cliente, listar) == 0) {
+            listar_clientes(&cliente);
+            bzero(cliente.mensagem_cliente, sizeof(cliente.mensagem_cliente));
+            continue;
+        }
+
+        enviar_mensagem_publica(cliente.cliente_socket, cliente.mensagem_cliente);
+
+        printf("[%s:%d] %s", cliente.IP, cliente.PORTA, cliente.mensagem_cliente);
         bzero(cliente.mensagem_cliente, sizeof(cliente.mensagem_cliente));
     }
 
@@ -63,6 +86,9 @@ void* funcao_servidor(void *argumento) {
 }
 
 void aceitar_conexoes(Servidor *servidor) {
+    // armazenando os dados das conexões em uma variável global
+    inicializar_clientes(clientes);
+
     Cliente cliente = *(Cliente *) malloc(sizeof(Cliente));
     int addr_len = sizeof(struct sockaddr_in);
     
@@ -80,10 +106,55 @@ void aceitar_conexoes(Servidor *servidor) {
 
         printf("Conexão bem sucedida - IP: %s PORTA: %d\n", cliente.IP, cliente.PORTA);
 
+        // armazenando os dados das conexões em uma variável global
+        registrar_cliente(&cliente);
+
         pthread_t server_thread;
         Cliente *p_cliente = malloc(sizeof(Cliente));
         *p_cliente = cliente;
 
         pthread_create(&server_thread, NULL, funcao_servidor, (void *) p_cliente);
+    }
+}
+
+void inicializar_clientes(Cliente *clientes) {
+    for (int i = 0; i < MAX_CONEXOES; i++) {
+        clientes[i] = *(Cliente *) malloc(sizeof(Cliente));
+        clientes[i].cliente_socket = 0;
+    }
+}
+
+void registrar_cliente(Cliente *novo_cliente) {
+    for (int i = 0; i < MAX_CONEXOES; i++) {
+        if (clientes[i].cliente_socket <= 0) {
+            clientes[i] = *novo_cliente;
+            break;
+        }
+    }
+}
+
+void listar_clientes(Cliente *cliente) {
+    char msg[4096];
+    for (int i = 0; i < MAX_CONEXOES; i++) {
+        if (clientes[i].cliente_socket > 0) {
+            strcat(msg, clientes[i].IP);
+            strcat(msg, "\n");
+            send(cliente->cliente_socket, msg, strlen(msg), 0);
+            bzero(msg, sizeof(msg));
+        }
+    }
+}
+
+void enviar_mensagem_publica(int socket_remetente, char *mensagem) {
+    char mensagem_enviada[4096];
+    for (int i = 0; i < MAX_CONEXOES; i++) {
+        if (clientes[i].cliente_socket != socket_remetente && clientes[i].cliente_socket > 0) {
+            strcat(mensagem_enviada, "[");
+            strcat(mensagem_enviada, clientes[i].IP);
+            strcat(mensagem_enviada, "] ");
+            strcat(mensagem_enviada, mensagem);
+            send(clientes[i].cliente_socket, mensagem_enviada, strlen(mensagem_enviada), 0);
+            bzero(mensagem_enviada, sizeof(mensagem_enviada));
+        }
     }
 }
