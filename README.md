@@ -1,5 +1,5 @@
 # chat-client-server-c-programming
-Implementação de uma aplicação de chat utilizando sockets na linguagem de programação C para Linux/Unix.
+Implementação de uma aplicação de chat utilizando sockets na linguagem de programação C para Linux.
 
 ## Executando o programa
 
