@@ -108,7 +108,7 @@ void* funcao_servidor(void *argumento) {
 void aceitar_conexoes(Servidor *servidor) {
     inicializar_clientes(clientes);
 
-    Cliente cliente = *(Cliente *) malloc(sizeof(Cliente));
+    Cliente cliente = *(Cliente *) calloc(1, sizeof(Cliente));
 
     pthread_t server_thread;
     Cliente *p_cliente = malloc(sizeof(Cliente));
@@ -195,10 +195,14 @@ void limpar_buffer_mensagem(char *mensagem, int tamanho) {
     bzero(mensagem, tamanho);
 }
 
-void limpar_buffer_cliente(int socket) {
+void limpar_buffer_cliente(int socket_desconectado) {
     for (int i = 0; i < MAX_CONEXOES; i++) {
-        if (clientes[i].cliente_socket == socket) {
-            clientes[i] = *(Cliente *) calloc(1, sizeof(Cliente));
+        if (clientes[i].cliente_socket == socket_desconectado) {
+            bzero(&clientes[i].cliente_socket, sizeof(clientes[i].cliente_socket));
+            bzero(&clientes[i].IP, sizeof(clientes[i].IP));
+            bzero(&clientes[i].PORTA, sizeof(clientes[i].PORTA));
+            bzero(clientes[i].mensagem_cliente, sizeof(clientes[i].mensagem_cliente));
+            bzero(&clientes[i].cfg_cliente, sizeof(clientes[i].cfg_cliente));
             total_conexoes--;
             break;
         }
