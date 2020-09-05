@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
     Servidor s1;
 
     if (argc != 2) {
-        printf("./<PROGRAMA> <PORTA_SERVIDOR>\n");
+        printf("%s <PORTA_SERVIDOR>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
