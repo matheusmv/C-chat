@@ -8,7 +8,7 @@
 
 #define MAX_CONEXOES 5
 #define BUFFER_SIZE 4096
-#define SERVIDOR_BACKLOG 3
+#define SERVIDOR_BACKLOG 5
 
 typedef struct cliente {
     char *IP;
@@ -24,7 +24,7 @@ int total_conexoes = 0;
 
 void enviar_resposta(Cliente *, char *);
 
-void* funcao_servidor(void *);
+void* func_thread_servidor(void *);
 
 void inicializar_clientes(Cliente *);
 
@@ -39,6 +39,8 @@ void enviar_mensagem_publica(Cliente *, char *);
 void limpar_buffer_mensagem(char *, int);
 
 void limpar_buffer_cliente(int);
+
+void socket_int_str(int, char *);
 
 void criar_socket(Servidor *servidor) {
     servidor->servidor_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -70,7 +72,7 @@ void enviar_resposta(Cliente *cliente, char *mensagem) {
     send(cliente->cliente_socket, mensagem, strlen(mensagem), 0);
 }
 
-void* funcao_servidor(void *argumento) {
+void* func_thread_servidor(void *argumento) {
     Cliente cliente = *(Cliente*) argumento;
 
     printf("Conexão bem sucedida - IP: %s PORTA: %d\n", cliente.IP, cliente.PORTA);
@@ -139,7 +141,7 @@ void aceitar_conexoes(Servidor *servidor) {
 
         *p_cliente = cliente;
 
-        pthread_create(&server_thread, NULL, funcao_servidor, (void *) p_cliente);
+        pthread_create(&server_thread, NULL, func_thread_servidor, (void *) p_cliente);
     }
 }
 
@@ -161,17 +163,30 @@ void registrar_cliente(Cliente *novo_cliente) {
 
 void listar_clientes(Cliente *cliente) {
     char mensagem_enviada[BUFFER_SIZE];
+    char porta[6];
 
-    for (int i = 0; i < MAX_CONEXOES; i++) {
-        if (clientes[i].cliente_socket > 0) {
-            strncat(mensagem_enviada, clientes[i].IP, strlen(clientes[i].IP));
-            strncat(mensagem_enviada, "\r\n", sizeof("\r\n"));
+    if (total_conexoes == 1) {
+        char *ninguem_online = "Não há usuários online no momemto.\n";
+        enviar_resposta(cliente, ninguem_online);
+    } else {
+        for (int i = 0; i < MAX_CONEXOES; i++) {
+            if (clientes[i].cliente_socket != cliente->cliente_socket && clientes[i].cliente_socket > 0) {
+                strncat(mensagem_enviada, "[", sizeof("["));
+                strncat(mensagem_enviada, clientes[i].IP, strlen(clientes[i].IP));
+                strncat(mensagem_enviada, ":", sizeof(":"));
+                socket_int_str(clientes[i].PORTA, porta);
+                strncat(mensagem_enviada, porta, strlen(porta));
+                limpar_buffer_mensagem(porta, sizeof(porta));
+                strncat(mensagem_enviada, "] ", sizeof("] "));
+                strncat(mensagem_enviada, "nome", sizeof("nome"));
+                strncat(mensagem_enviada, "\r\n", sizeof("\r\n"));
+            }
         }
+
+        enviar_resposta(cliente, mensagem_enviada);
+
+        limpar_buffer_mensagem(mensagem_enviada, sizeof(mensagem_enviada));
     }
-
-    enviar_resposta(cliente, mensagem_enviada);
-
-    limpar_buffer_mensagem(mensagem_enviada, sizeof(mensagem_enviada));
 }
 
 void enviar_mensagem_publica(Cliente *cliente, char *mensagem) {
@@ -207,4 +222,21 @@ void limpar_buffer_cliente(int socket_desconectado) {
             break;
         }
     }
+}
+
+/* solução feia */
+void socket_int_str(int socket_int, char *buffer_destino) {
+    char u[2], d[2], c[2], m[2], dm[2];
+
+    sprintf(u, "%d", (socket_int/ 1) % 10);
+    sprintf(d, "%d", (socket_int / 10) % 10);
+    sprintf(c, "%d", (socket_int / 100) % 10);
+    sprintf(m, "%d", (socket_int / 1000) % 10);
+    sprintf(dm, "%d", (socket_int / 10000) % 10);
+
+    strncat(buffer_destino, dm, strlen(dm));
+    strncat(buffer_destino, m, strlen(m));
+    strncat(buffer_destino, c, strlen(c));
+    strncat(buffer_destino, d, strlen(d));
+    strncat(buffer_destino, u, strlen(u));
 }
