@@ -1,7 +1,7 @@
 
 client:
 	gcc -c ./cliente/cliente.c -o ./cliente/cliente.o
-	gcc ./cliente/main-cliente.c ./cliente/cliente.o -I ./cliente -o ./cliente/cliente
+	gcc ./cliente/main-cliente.c ./cliente/cliente.o -I ./cliente -lpthread -o ./cliente/cliente
 
 
 server:

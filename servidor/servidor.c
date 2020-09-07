@@ -1,3 +1,7 @@
+// TODO autenticação cliente-servidor
+// TODO gerenciar dados do cliente no servidor
+// TODO mensagem privadas cliente->cliente 
+
 #include "servidor.h"
 
 #include <stdio.h>

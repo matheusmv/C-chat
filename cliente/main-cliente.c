@@ -16,12 +16,7 @@ int main(int argc, char *argv[]) {
 
     conectar(&c1, argv[1], (uint16_t) atoi(argv[2]));
 
-    while (1) {
-        enviar_mensagem(&c1);
-        receber_mensagem(&c1);
-    }
-
-    fechar_conexao(&c1);
+    iniciar_chat(&c1);
 
     return EXIT_SUCCESS;
 }

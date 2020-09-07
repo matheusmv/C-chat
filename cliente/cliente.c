@@ -4,6 +4,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
+
+#define BUFFER_SIZE 4096
+
+typedef struct servidor {
+    struct sockaddr_in cfg_servidor;
+    char *IP_SERVIDOR;
+    uint16_t PORTA;
+} Servidor;
+
+void iniciar_chat(Cliente *);
+
+void fechar_conexao(Cliente *);
+
+void* func_thread_recv_cliente(void *);
 
 void criar_socket(Cliente *cliente) {
     cliente->cliente_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -37,32 +52,53 @@ void conectar(Cliente *cliente, char *IP, uint16_t PORTA) {
 }
 
 void enviar_mensagem(Cliente *cliente) {
-    char mensagem[4096];
+    char input_cliente[BUFFER_SIZE];
+    char mensagem_enviada[BUFFER_SIZE];
 
-    bzero(mensagem, sizeof(mensagem));
+    bzero(input_cliente, sizeof(input_cliente));
+    bzero(mensagem_enviada, sizeof(mensagem_enviada));
 
-    printf("Msg > ");
-    fgets(mensagem, sizeof(mensagem), stdin);
+    fgets(input_cliente, sizeof(input_cliente), stdin);
 
-    if (send(cliente->cliente_socket, mensagem, strlen(mensagem), 0) < 0) {
+    strncat(mensagem_enviada, input_cliente, strlen(input_cliente) - 1);
+    strncat(mensagem_enviada, "\r\n", sizeof("\r\n"));
+
+    if (send(cliente->cliente_socket, mensagem_enviada, strlen(mensagem_enviada), 0) < 0) {
         printf("Erro ao enviar mensagem\n");
     }
-
-    printf("Mensagem enviada!\n");
 }
 
-void receber_mensagem(Cliente *cliente) {
-    char resposta_servidor[4096];
+void iniciar_chat(Cliente *cliente) {
+    pthread_t client_thread;
+    Cliente *p_cliente = malloc(sizeof(Cliente));
+    p_cliente = cliente;
 
-    if (recv(cliente->cliente_socket, resposta_servidor, sizeof(resposta_servidor), 0) < 0) {
-        printf("Falha ao recebem mensagem do servidor\n");
+    pthread_create(&client_thread, NULL, func_thread_recv_cliente, (void *) p_cliente);
+
+    while (1) {
+        enviar_mensagem(cliente);
     }
-
-    printf("Mensagem do servidor: ");
-    printf("%s\n", resposta_servidor);
-    bzero(resposta_servidor, sizeof(resposta_servidor));
 }
 
 void fechar_conexao(Cliente *cliente) {
     close(cliente->cliente_socket);
+}
+
+void* func_thread_recv_cliente(void *argumento) {
+    Cliente cliente = *(Cliente *) argumento;
+
+    int len;
+    char resposta_servidor[BUFFER_SIZE];
+
+    while (1) {
+        len = recv(cliente.cliente_socket, resposta_servidor, sizeof(resposta_servidor), 0);
+
+        if (len < 0) {
+            printf("Falha ao recebem mensagem do servidor\n");
+        }
+        
+        printf("%s", resposta_servidor);
+
+        bzero(resposta_servidor, sizeof(resposta_servidor));
+    }
 }
