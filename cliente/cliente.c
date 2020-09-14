@@ -1,3 +1,6 @@
+// TODO interromper execução caso a conexão com o servidor seja rejeitada
+// TODO implementar etapa de autenticação
+
 #include "cliente.h"
 
 #include <stdio.h>
@@ -17,6 +20,8 @@ typedef struct servidor {
 void iniciar_chat(Cliente *);
 
 void fechar_conexao(Cliente *);
+
+void* func_thread_send_cliente(void *);
 
 void* func_thread_recv_cliente(void *);
 
@@ -39,7 +44,7 @@ void configura_servidor(Servidor *servidor, char *IP, uint16_t PORTA) {
     servidor->cfg_servidor.sin_port = htons(PORTA);
 }
 
-void conectar(Cliente *cliente, char *IP, uint16_t PORTA) {
+void conectar(Cliente *cliente, char *IP, uint16_t PORTA, char *usuario) {
     Servidor servidor = *(Servidor *) malloc(sizeof(Servidor));
     configura_servidor(&servidor, IP, PORTA);
 
@@ -51,37 +56,41 @@ void conectar(Cliente *cliente, char *IP, uint16_t PORTA) {
     printf("Conectado com sucesso!\n");
 }
 
-void enviar_mensagem(Cliente *cliente) {
-    char input_cliente[BUFFER_SIZE];
-    char mensagem_enviada[BUFFER_SIZE];
-
-    bzero(input_cliente, sizeof(input_cliente));
-    bzero(mensagem_enviada, sizeof(mensagem_enviada));
-
-    fgets(input_cliente, sizeof(input_cliente), stdin);
-
-    strncat(mensagem_enviada, input_cliente, strlen(input_cliente) - 1);
-    strncat(mensagem_enviada, "\r\n", sizeof("\r\n"));
-
-    if (send(cliente->cliente_socket, mensagem_enviada, strlen(mensagem_enviada), 0) < 0) {
-        printf("Erro ao enviar mensagem\n");
-    }
+void fechar_conexao(Cliente *cliente) {
+    close(cliente->cliente_socket);
 }
 
 void iniciar_chat(Cliente *cliente) {
-    pthread_t client_thread;
+    pthread_t client_recv_thread, client_send_thread;
     Cliente *p_cliente = malloc(sizeof(Cliente));
     p_cliente = cliente;
 
-    pthread_create(&client_thread, NULL, func_thread_recv_cliente, (void *) p_cliente);
+    pthread_create(&client_send_thread, NULL, func_thread_send_cliente, (void *) p_cliente);
+    pthread_create(&client_recv_thread, NULL, func_thread_recv_cliente, (void *) p_cliente);
 
-    while (1) {
-        enviar_mensagem(cliente);
-    }
+    pthread_join(client_send_thread, NULL);
+    pthread_join(client_recv_thread, NULL);
 }
 
-void fechar_conexao(Cliente *cliente) {
-    close(cliente->cliente_socket);
+void* func_thread_send_cliente(void *argumento) {
+    Cliente cliente = *(Cliente *) argumento;
+
+    char input_cliente[BUFFER_SIZE];
+    char mensagem_enviada[BUFFER_SIZE];
+
+    while (1) {
+        bzero(input_cliente, sizeof(input_cliente));
+        bzero(mensagem_enviada, sizeof(mensagem_enviada));
+
+        fgets(input_cliente, sizeof(input_cliente), stdin);
+
+        strncat(mensagem_enviada, input_cliente, strlen(input_cliente) - 1);
+        strncat(mensagem_enviada, "\r\n", sizeof("\r\n"));
+
+        if (send(cliente.cliente_socket, mensagem_enviada, strlen(mensagem_enviada), 0) < 0) {
+            printf("Erro ao enviar mensagem\n");
+        }
+    }
 }
 
 void* func_thread_recv_cliente(void *argumento) {

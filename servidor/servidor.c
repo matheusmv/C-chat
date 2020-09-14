@@ -15,6 +15,7 @@
 #define SERVIDOR_BACKLOG 5
 
 typedef struct cliente {
+    char *usuario;
     char *IP;
     uint16_t PORTA;
     int cliente_socket;
@@ -39,6 +40,8 @@ void listar_clientes(Cliente *);
 char dados_cliente(Cliente *);
 
 void enviar_mensagem_publica(Cliente *, char *);
+
+void enviar_mensagem_privada(Cliente *, char *);
 
 void limpar_buffer_mensagem(char *, int);
 
@@ -83,6 +86,7 @@ void* func_thread_servidor(void *argumento) {
     int len;
 
     char *listar = ":listar\r\n";
+    char *mensagem_privada = ":enviar";
 
     while (1) {
         len = recv(cliente.cliente_socket, cliente.mensagem_cliente, sizeof(cliente.mensagem_cliente), 0);
@@ -98,6 +102,8 @@ void* func_thread_servidor(void *argumento) {
 
         if (strcmp(cliente.mensagem_cliente, listar) == 0) {
             listar_clientes(&cliente);
+        } else if (strncmp(cliente.mensagem_cliente, mensagem_privada, strlen(mensagem_privada)) == 0) {
+            enviar_mensagem_privada(&cliente, cliente.mensagem_cliente);
         } else {
             printf("[%s:%d] %s", cliente.IP, cliente.PORTA, cliente.mensagem_cliente);
             enviar_mensagem_publica(&cliente, cliente.mensagem_cliente);
@@ -180,7 +186,7 @@ void listar_clientes(Cliente *cliente) {
                 strncat(mensagem_enviada, porta, strlen(porta));
                 limpar_buffer_mensagem(porta, sizeof(porta));
                 strncat(mensagem_enviada, "] ", sizeof("] "));
-                strncat(mensagem_enviada, "nome", sizeof("nome"));
+                strncat(mensagem_enviada, clientes[i].usuario, strlen(clientes[i].usuario));
                 strncat(mensagem_enviada, "\r\n", sizeof("\r\n"));
             }
         }
@@ -213,6 +219,10 @@ void enviar_mensagem_publica(Cliente *cliente, char *mensagem) {
 
     limpar_buffer_mensagem(porta, sizeof(porta));
     limpar_buffer_mensagem(mensagem_enviada, sizeof(mensagem_enviada));
+}
+
+void enviar_mensagem_privada(Cliente *cliente, char *mensagem) {
+    // TODO enviar <msg> usuario_destino
 }
 
 void limpar_buffer_mensagem(char *mensagem, int tamanho) {

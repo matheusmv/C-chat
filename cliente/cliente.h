@@ -11,7 +11,7 @@ typedef struct cliente {
 
 void criar_socket(Cliente *);
 
-void conectar(Cliente *, char *, uint16_t);
+void conectar(Cliente *, char *, uint16_t, char *);
 
 void iniciar_chat(Cliente *);
 
