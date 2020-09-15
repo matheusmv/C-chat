@@ -162,9 +162,27 @@ void inicializar_clientes(Cliente *clientes) {
 }
 
 void auth_cliente(Cliente *cliente) {
-    recv(cliente->cliente_socket, cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente), 0);
-    strncpy(cliente->usuario, cliente->mensagem_cliente, sizeof(cliente->usuario));
-    limpar_buffer_mensagem(cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente));
+    int status = 0;
+
+    while (1) {
+        recv(cliente->cliente_socket, cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente), 0);
+        strncpy(cliente->usuario, cliente->mensagem_cliente, sizeof(cliente->usuario));
+        limpar_buffer_mensagem(cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente));
+
+        for (int i = 0; i < MAX_CONEXOES; i++) {
+            if (strcmp(clientes[i].usuario, cliente->usuario) == 0) {
+                char *resposta = "usuário já cadastrado, tente novamente.\r\n";
+                enviar_resposta(cliente, resposta);
+                status = 0;
+                break;
+            }
+            status++;
+        }
+
+        if (status == MAX_CONEXOES) {
+            break;
+        }
+    }
 }
 
 void registrar_cliente(Cliente *novo_cliente) {
