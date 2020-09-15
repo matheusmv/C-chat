@@ -8,7 +8,7 @@ Implementação de uma aplicação de chat utilizando sockets na linguagem de pr
 
 ### Cliente
       - make client
-      - ./cliente/cliente <IP-SERVIDOR> <PORTA>
+      - ./cliente/cliente <IP> <PORTA> <USUARIO>
 
 ### Servidor
       - make server
