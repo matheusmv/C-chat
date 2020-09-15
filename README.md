@@ -25,7 +25,7 @@ Implementação de uma aplicação de chat utilizando sockets na linguagem de pr
       Obs.: solução ineficiente, pode gerar alto consumo de processamento/memória.
 
 - [ ] Implementar etapa de identificação/autenticação cliente -> servidor (Cliente/Servidor).
-- [ ] Implementar gerenciamento de informações dos clientes (Servidor).
+- [x] Implementar gerenciamento de informações dos clientes (Servidor).
 - [ ] Implementar direcionamento de mensagens cliente -> servidor -> cliente (Servidor).
 
 ## Progresso (Operações exigidas na especificação do projeto)
@@ -33,7 +33,7 @@ Implementação de uma aplicação de chat utilizando sockets na linguagem de pr
 - [ ] conectar
   - [ ] conectar 'login' 'senha' 'servidor' 'porta'
   - [x] Conecta-se ao servidor, vinculando 'login' ao IP e porta do cliente origem.
-  - [ ] Informar em caso de nome já existente ou de servidor indisponível.
+  - [x] Informar em caso de nome já existente ou de servidor indisponível.
 - [x] listar
   - [x] listar
   - [x] Lista todos os participantes online no servidor mostrando, IP, porta e nome.
