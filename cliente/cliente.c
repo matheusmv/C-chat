@@ -25,6 +25,8 @@ void* func_thread_send_cliente(void *);
 
 void* func_thread_recv_cliente(void *);
 
+void auth_servidor(Cliente *);
+
 void criar_socket(Cliente *cliente) {
     cliente->cliente_socket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -44,7 +46,7 @@ void configura_servidor(Servidor *servidor, char *IP, uint16_t PORTA) {
     servidor->cfg_servidor.sin_port = htons(PORTA);
 }
 
-void conectar(Cliente *cliente, char *IP, uint16_t PORTA, char *usuario) {
+void conectar(Cliente *cliente, char *IP, uint16_t PORTA) {
     Servidor servidor = *(Servidor *) malloc(sizeof(Servidor));
     configura_servidor(&servidor, IP, PORTA);
 
@@ -64,6 +66,8 @@ void iniciar_chat(Cliente *cliente) {
     pthread_t client_recv_thread, client_send_thread;
     Cliente *p_cliente = malloc(sizeof(Cliente));
     p_cliente = cliente;
+
+    auth_servidor(cliente);
 
     pthread_create(&client_send_thread, NULL, func_thread_send_cliente, (void *) p_cliente);
     pthread_create(&client_recv_thread, NULL, func_thread_recv_cliente, (void *) p_cliente);
@@ -110,4 +114,8 @@ void* func_thread_recv_cliente(void *argumento) {
 
         bzero(resposta_servidor, sizeof(resposta_servidor));
     }
+}
+
+void auth_servidor(Cliente *cliente) {
+    send(cliente->cliente_socket, cliente->usuario, strlen(cliente->usuario), 0);
 }

@@ -6,12 +6,13 @@
 #include <arpa/inet.h>
 
 typedef struct cliente {
+    char *usuario;
     int cliente_socket;
 } Cliente;
 
 void criar_socket(Cliente *);
 
-void conectar(Cliente *, char *, uint16_t, char *);
+void conectar(Cliente *, char *, uint16_t);
 
 void iniciar_chat(Cliente *);
 

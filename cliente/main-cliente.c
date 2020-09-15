@@ -12,9 +12,11 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    c1.usuario = argv[3];
+
     criar_socket(&c1);
 
-    conectar(&c1, argv[1], (uint16_t) atoi(argv[2]), argv[3]);
+    conectar(&c1, argv[1], (uint16_t) atoi(argv[2]));
 
     iniciar_chat(&c1);
 

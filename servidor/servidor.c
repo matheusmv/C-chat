@@ -15,7 +15,7 @@
 #define SERVIDOR_BACKLOG 5
 
 typedef struct cliente {
-    char *usuario;
+    char usuario[50];
     char *IP;
     uint16_t PORTA;
     int cliente_socket;
@@ -32,6 +32,8 @@ void enviar_resposta(Cliente *, char *);
 void* func_thread_servidor(void *);
 
 void inicializar_clientes(Cliente *);
+
+void auth_cliente(Cliente *);
 
 void registrar_cliente(Cliente *);
 
@@ -105,7 +107,7 @@ void* func_thread_servidor(void *argumento) {
         } else if (strncmp(cliente.mensagem_cliente, mensagem_privada, strlen(mensagem_privada)) == 0) {
             enviar_mensagem_privada(&cliente, cliente.mensagem_cliente);
         } else {
-            printf("[%s:%d] %s", cliente.IP, cliente.PORTA, cliente.mensagem_cliente);
+            printf("[%s:%d] %s >>> %s", cliente.IP, cliente.PORTA, cliente.usuario, cliente.mensagem_cliente);
             enviar_mensagem_publica(&cliente, cliente.mensagem_cliente);
         }
 
@@ -159,9 +161,16 @@ void inicializar_clientes(Cliente *clientes) {
     }
 }
 
+void auth_cliente(Cliente *cliente) {
+    recv(cliente->cliente_socket, cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente), 0);
+    strncpy(cliente->usuario, cliente->mensagem_cliente, sizeof(cliente->usuario));
+    limpar_buffer_mensagem(cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente));
+}
+
 void registrar_cliente(Cliente *novo_cliente) {
     for (int i = 0; i < MAX_CONEXOES; i++) {
         if (clientes[i].cliente_socket <= 0) {
+            auth_cliente(novo_cliente);
             clientes[i] = *novo_cliente;
             total_conexoes++;
             break;
@@ -207,7 +216,7 @@ void enviar_mensagem_publica(Cliente *cliente, char *mensagem) {
     sprintf(porta, "%d",clientes->PORTA);
     strncat(mensagem_enviada, porta, strlen(porta));
     strncat(mensagem_enviada, "] ", sizeof("] "));
-    strncat(mensagem_enviada, "nome", sizeof("nome"));
+    strncat(mensagem_enviada, cliente->usuario, strlen(cliente->usuario));
     strncat(mensagem_enviada, " >>> ", sizeof(" >>> "));
     strncat(mensagem_enviada, mensagem, strlen(mensagem));
 
@@ -232,6 +241,7 @@ void limpar_buffer_mensagem(char *mensagem, int tamanho) {
 void limpar_buffer_cliente(int socket_desconectado) {
     for (int i = 0; i < MAX_CONEXOES; i++) {
         if (clientes[i].cliente_socket == socket_desconectado) {
+            bzero(&clientes[i].usuario, sizeof(clientes[i].usuario));
             bzero(&clientes[i].cliente_socket, sizeof(clientes[i].cliente_socket));
             bzero(&clientes[i].IP, sizeof(clientes[i].IP));
             bzero(&clientes[i].PORTA, sizeof(clientes[i].PORTA));
