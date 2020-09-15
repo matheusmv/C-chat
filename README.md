@@ -32,13 +32,13 @@ Implementação de uma aplicação de chat utilizando sockets na linguagem de pr
 
 - [ ] conectar
   - [ ] conectar 'login' 'senha' 'servidor' 'porta'
-  - [ ] Conecta-se ao servidor, vinculando 'login' ao IP e porta do cliente origem.
+  - [x] Conecta-se ao servidor, vinculando 'login' ao IP e porta do cliente origem.
   - [ ] Informar em caso de nome já existente ou de servidor indisponível.
-- [ ] listar
+- [x] listar
   - [x] listar
-  - [ ] Lista todos os participantes online no servidor mostrando, IP, porta e nome.
+  - [x] Lista todos os participantes online no servidor mostrando, IP, porta e nome.
   - [x] Informar em caso de nenhum participante online.
 - [ ] enviar
   - [ ] enviar 'msg' 'participante'
-  - [ ] Envia a mensagem 'msg' ao participante 'participante' de forma privada. Caso o participante não seja informado, a mensagem é enviada de forma pública.
+  - [x] Caso o participante não seja informado, a mensagem é enviada de forma pública.
   - [ ] Informar em caso do participante destino não estar online.
