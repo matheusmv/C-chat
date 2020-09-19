@@ -1,6 +1,3 @@
-// TODO interromper execução caso a conexão com o servidor seja rejeitada
-// TODO implementar etapa de autenticação
-
 #include "cliente.h"
 
 #include <stdio.h>

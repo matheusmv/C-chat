@@ -1,7 +1,3 @@
-// TODO autenticação cliente-servidor
-// TODO gerenciar dados do cliente no servidor
-// TODO mensagem privadas cliente->cliente 
-
 #include "servidor.h"
 
 #include <stdio.h>
@@ -41,9 +37,11 @@ void listar_clientes(Cliente *);
 
 char dados_cliente(Cliente *);
 
-void enviar_mensagem_publica(Cliente *, char *);
+void enviar_mensagem_publica(Cliente *);
 
-void enviar_mensagem_privada(Cliente *, char *);
+void enviar_mensagem_privada(Cliente *);
+
+void construir_mensagem(Cliente *, char *);
 
 void limpar_buffer_mensagem(char *, int);
 
@@ -105,10 +103,10 @@ void* func_thread_servidor(void *argumento) {
         if (strcmp(cliente.mensagem_cliente, listar) == 0) {
             listar_clientes(&cliente);
         } else if (strncmp(cliente.mensagem_cliente, mensagem_privada, strlen(mensagem_privada)) == 0) {
-            enviar_mensagem_privada(&cliente, cliente.mensagem_cliente);
+            enviar_mensagem_privada(&cliente);
         } else {
             printf("[%s:%d] %s >>> %s", cliente.IP, cliente.PORTA, cliente.usuario, cliente.mensagem_cliente);
-            enviar_mensagem_publica(&cliente, cliente.mensagem_cliente);
+            enviar_mensagem_publica(&cliente);
         }
 
         limpar_buffer_mensagem(cliente.mensagem_cliente, sizeof(cliente.mensagem_cliente));
@@ -211,10 +209,10 @@ void listar_clientes(Cliente *cliente) {
                 strncat(mensagem_enviada, ":", sizeof(":"));
                 sprintf(porta, "%d",clientes[i].PORTA);
                 strncat(mensagem_enviada, porta, strlen(porta));
-                limpar_buffer_mensagem(porta, sizeof(porta));
                 strncat(mensagem_enviada, "] ", sizeof("] "));
                 strncat(mensagem_enviada, clientes[i].usuario, strlen(clientes[i].usuario));
                 strncat(mensagem_enviada, "\r\n", sizeof("\r\n"));
+                limpar_buffer_mensagem(porta, sizeof(porta));
             }
         }
 
@@ -224,19 +222,10 @@ void listar_clientes(Cliente *cliente) {
     }
 }
 
-void enviar_mensagem_publica(Cliente *cliente, char *mensagem) {
+void enviar_mensagem_publica(Cliente *cliente) {
     char mensagem_enviada[BUFFER_SIZE];
-    char porta[6];
 
-    strncat(mensagem_enviada, "[", sizeof("["));
-    strncat(mensagem_enviada, cliente->IP, strlen(cliente->IP));
-    strncat(mensagem_enviada, ":", sizeof(":"));
-    sprintf(porta, "%d",clientes->PORTA);
-    strncat(mensagem_enviada, porta, strlen(porta));
-    strncat(mensagem_enviada, "] ", sizeof("] "));
-    strncat(mensagem_enviada, cliente->usuario, strlen(cliente->usuario));
-    strncat(mensagem_enviada, " >>> ", sizeof(" >>> "));
-    strncat(mensagem_enviada, mensagem, strlen(mensagem));
+    construir_mensagem(cliente, mensagem_enviada);
 
     for (int i = 0; i < MAX_CONEXOES; i++) {
         if (clientes[i].cliente_socket != cliente->cliente_socket && clientes[i].cliente_socket > 0) {
@@ -244,12 +233,27 @@ void enviar_mensagem_publica(Cliente *cliente, char *mensagem) {
         }
     }
 
-    limpar_buffer_mensagem(porta, sizeof(porta));
     limpar_buffer_mensagem(mensagem_enviada, sizeof(mensagem_enviada));
 }
 
-void enviar_mensagem_privada(Cliente *cliente, char *mensagem) {
+void enviar_mensagem_privada(Cliente *cliente) {
     // TODO enviar <msg> usuario_destino
+}
+
+void construir_mensagem(Cliente *cliente_emissor, char *mensagem_buffer) {
+    char porta[6];
+
+    strncat(mensagem_buffer, "[", sizeof("["));
+    strncat(mensagem_buffer, cliente_emissor->IP, strlen(cliente_emissor->IP));
+    strncat(mensagem_buffer, ":", sizeof(":"));
+    sprintf(porta, "%d",clientes->PORTA);
+    strncat(mensagem_buffer, porta, strlen(porta));
+    strncat(mensagem_buffer, "] ", sizeof("] "));
+    strncat(mensagem_buffer, cliente_emissor->usuario, strlen(cliente_emissor->usuario));
+    strncat(mensagem_buffer, " >>> ", sizeof(" >>> "));
+    strncat(mensagem_buffer, cliente_emissor->mensagem_cliente, strlen(cliente_emissor->mensagem_cliente));
+
+    limpar_buffer_mensagem(porta, sizeof(porta));
 }
 
 void limpar_buffer_mensagem(char *mensagem, int tamanho) {
