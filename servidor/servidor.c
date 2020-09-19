@@ -104,6 +104,7 @@ void* func_thread_servidor(void *argumento) {
             listar_clientes(&cliente);
         } else if (strncmp(cliente.mensagem_cliente, mensagem_privada, strlen(mensagem_privada)) == 0) {
             enviar_mensagem_privada(&cliente);
+            continue;
         } else {
             printf("[%s:%d] %s >>> %s", cliente.IP, cliente.PORTA, cliente.usuario, cliente.mensagem_cliente);
             enviar_mensagem_publica(&cliente);
@@ -239,34 +240,47 @@ void enviar_mensagem_publica(Cliente *cliente) {
 void enviar_mensagem_privada(Cliente *cliente) {
     char mensagem_enviada[BUFFER_SIZE];
     char usuario_destino[50];
+    int envio_confirmado = 0;
 
-    for (int i = 0; i < strlen(cliente->mensagem_cliente); i++) {
-        // capturando a mensagem
-        if ((int) cliente->mensagem_cliente[i] == 60) {
-            i++;
-            int aux = 0;
-            while ((int) cliente->mensagem_cliente[i] != 62){
-                mensagem_enviada[aux++] = cliente->mensagem_cliente[i++];
+    if (total_conexoes == 1) {
+        char *ninguem_online = "Não há usuários online no momemto.\n";
+        enviar_resposta(cliente, ninguem_online);
+    } else {
+        for (int i = 0; i < strlen(cliente->mensagem_cliente); i++) {
+            // capturando a mensagem
+            if ((int) cliente->mensagem_cliente[i] == 60) {
+                i++;
+                int aux = 0;
+                while ((int) cliente->mensagem_cliente[i] != 62){
+                    mensagem_enviada[aux++] = cliente->mensagem_cliente[i++];
+                }
+                strncat(mensagem_enviada, "\r\n", sizeof("\r\n"));
             }
-            strncat(mensagem_enviada, "\r\n", sizeof("\r\n"));
-        }
-        // capturando destinatário
-        if ((int) cliente->mensagem_cliente[i] == 62) {
-            i += 2;
-            int aux = 0;
-            while ((int) cliente->mensagem_cliente[i] != 13) {
-                usuario_destino[aux++] = cliente->mensagem_cliente[i++];
+            // capturando destinatário
+            if ((int) cliente->mensagem_cliente[i] == 62) {
+                i += 2;
+                int aux = 0;
+                while ((int) cliente->mensagem_cliente[i] != 13) {
+                    usuario_destino[aux++] = cliente->mensagem_cliente[i++];
+                }
             }
         }
-    }
 
-    for (int i = 0; i < MAX_CONEXOES; i++) {
-        if (strncmp(clientes[i].usuario, usuario_destino, strlen(usuario_destino)) == 0) {
-            limpar_buffer_mensagem(cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente));
-            strncpy(cliente->mensagem_cliente, mensagem_enviada, sizeof(cliente->mensagem_cliente));
-            limpar_buffer_mensagem(mensagem_enviada, sizeof(mensagem_enviada));
-            construir_mensagem(cliente, mensagem_enviada);
-            enviar_resposta(&clientes[i], mensagem_enviada);
+        for (int i = 0; i < MAX_CONEXOES; i++) {
+            if (strncmp(clientes[i].usuario, usuario_destino, strlen(usuario_destino)) == 0) {
+                limpar_buffer_mensagem(cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente));
+                strncpy(cliente->mensagem_cliente, mensagem_enviada, sizeof(cliente->mensagem_cliente));
+                limpar_buffer_mensagem(mensagem_enviada, sizeof(mensagem_enviada));
+                construir_mensagem(cliente, mensagem_enviada);
+                enviar_resposta(&clientes[i], mensagem_enviada);
+                envio_confirmado = 1;
+                break;
+            }
+        }
+        
+        if (envio_confirmado == 0) {
+            char *ninguem_online = "Usuário não está online no momemto.\n";
+            enviar_resposta(cliente, ninguem_online);
         }
     }
 
