@@ -92,6 +92,8 @@ void* func_thread_send_cliente(void *argumento) {
             printf("Erro ao enviar mensagem\n");
         }
     }
+
+    return NULL;
 }
 
 void* func_thread_recv_cliente(void *argumento) {
@@ -103,7 +105,10 @@ void* func_thread_recv_cliente(void *argumento) {
     while (1) {
         len = recv(cliente.cliente_socket, resposta_servidor, sizeof(resposta_servidor), 0);
 
-        if (len < 0) {
+        if (len == 0) {
+            printf("Conexão com o servidor foi encerrada\n");
+            return NULL;
+        } else if (len == -1) {
             printf("Falha ao recebem mensagem do servidor\n");
         }
         
@@ -111,6 +116,8 @@ void* func_thread_recv_cliente(void *argumento) {
 
         bzero(resposta_servidor, sizeof(resposta_servidor));
     }
+
+    return NULL;
 }
 
 void auth_servidor(Cliente *cliente) {
