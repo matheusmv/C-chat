@@ -26,7 +26,7 @@ Implementação de uma aplicação de chat utilizando sockets na linguagem de pr
 
 - [ ] Implementar etapa de identificação/autenticação cliente -> servidor (Cliente/Servidor).
 - [x] Implementar gerenciamento de informações dos clientes (Servidor).
-- [ ] Implementar direcionamento de mensagens cliente -> servidor -> cliente (Servidor).
+- [x] Implementar direcionamento de mensagens cliente -> servidor -> cliente (Servidor).
 
 ## Progresso (Operações exigidas na especificação do projeto)
 
@@ -39,6 +39,6 @@ Implementação de uma aplicação de chat utilizando sockets na linguagem de pr
   - [x] Lista todos os participantes online no servidor mostrando, IP, porta e nome.
   - [x] Informar em caso de nenhum participante online.
 - [ ] enviar
-  - [ ] enviar 'msg' 'participante'
+  - [x] enviar 'msg' 'participante'
   - [x] Caso o participante não seja informado, a mensagem é enviada de forma pública.
   - [ ] Informar em caso do participante destino não estar online.
