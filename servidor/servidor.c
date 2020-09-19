@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <time.h>
 
 #define MAX_CONEXOES 5
 #define BUFFER_SIZE 4096
@@ -245,6 +246,7 @@ void enviar_mensagem_privada(Cliente *cliente) {
     if (total_conexoes == 1) {
         char *ninguem_online = "Não há usuários online no momemto.\n";
         enviar_resposta(cliente, ninguem_online);
+        limpar_buffer_mensagem(cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente));
     } else {
         for (int i = 0; i < strlen(cliente->mensagem_cliente); i++) {
             // capturando a mensagem
@@ -284,24 +286,34 @@ void enviar_mensagem_privada(Cliente *cliente) {
         }
     }
 
+    limpar_buffer_mensagem(cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente));
     limpar_buffer_mensagem(mensagem_enviada, sizeof(mensagem_enviada));
     limpar_buffer_mensagem(usuario_destino, sizeof(usuario_destino));
 }
 
 void construir_mensagem(Cliente *cliente_emissor, char *mensagem_buffer) {
     char porta[6];
+    char horario[50];
 
-    strncat(mensagem_buffer, "[", sizeof("["));
+    limpar_buffer_mensagem(porta, sizeof(porta));
+    limpar_buffer_mensagem(horario, sizeof(horario));
+
+    time_t horario_atual;
+    time(&horario_atual);
+    strncat(horario, ctime(&horario_atual), sizeof(horario));
+
+    strncat(mensagem_buffer, "Msg de ", sizeof("Msg de "));
+    strncat(mensagem_buffer, cliente_emissor->usuario, strlen(cliente_emissor->usuario));
+    strncat(mensagem_buffer, " [", sizeof(" ["));
     strncat(mensagem_buffer, cliente_emissor->IP, strlen(cliente_emissor->IP));
     strncat(mensagem_buffer, ":", sizeof(":"));
     sprintf(porta, "%d",clientes->PORTA);
     strncat(mensagem_buffer, porta, strlen(porta));
+    strncat(mensagem_buffer, "]:", sizeof("]:"));
+    strncat(mensagem_buffer, "[", sizeof("["));
+    strncat(mensagem_buffer, horario, strlen(horario) - 1);
     strncat(mensagem_buffer, "] ", sizeof("] "));
-    strncat(mensagem_buffer, cliente_emissor->usuario, strlen(cliente_emissor->usuario));
-    strncat(mensagem_buffer, " >>> ", sizeof(" >>> "));
     strncat(mensagem_buffer, cliente_emissor->mensagem_cliente, strlen(cliente_emissor->mensagem_cliente));
-
-    limpar_buffer_mensagem(porta, sizeof(porta));
 }
 
 void limpar_buffer_mensagem(char *mensagem, int tamanho) {
