@@ -22,7 +22,7 @@ void* func_thread_send_cliente(void *);
 
 void* func_thread_recv_cliente(void *);
 
-void auth_servidor(Cliente *);
+int auth_servidor(Cliente *);
 
 void criar_socket(Cliente *cliente) {
     cliente->cliente_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -64,13 +64,15 @@ void iniciar_chat(Cliente *cliente) {
     Cliente *p_cliente = malloc(sizeof(Cliente));
     p_cliente = cliente;
 
-    auth_servidor(cliente);
+    if (auth_servidor(cliente) == 1) {
+        pthread_create(&client_send_thread, NULL, func_thread_send_cliente, (void *) p_cliente);
+        pthread_create(&client_recv_thread, NULL, func_thread_recv_cliente, (void *) p_cliente);
 
-    pthread_create(&client_send_thread, NULL, func_thread_send_cliente, (void *) p_cliente);
-    pthread_create(&client_recv_thread, NULL, func_thread_recv_cliente, (void *) p_cliente);
+        pthread_join(client_send_thread, NULL);
+        pthread_join(client_recv_thread, NULL);
+    }
 
-    pthread_join(client_send_thread, NULL);
-    pthread_join(client_recv_thread, NULL);
+    printf("Tente alterar o <USUARIO>.\n");
 }
 
 void* func_thread_send_cliente(void *argumento) {
@@ -120,6 +122,22 @@ void* func_thread_recv_cliente(void *argumento) {
     return NULL;
 }
 
-void auth_servidor(Cliente *cliente) {
+int auth_servidor(Cliente *cliente) {
+    int confirmacao_servidor = 0;
+    char resposta_servidor[BUFFER_SIZE];
+    char *sucesso = "sucesso\r\n";
+
+    bzero(resposta_servidor, sizeof(resposta_servidor));
+
     send(cliente->cliente_socket, cliente->usuario, strlen(cliente->usuario), 0);
+    recv(cliente->cliente_socket, resposta_servidor, sizeof(resposta_servidor), 0);
+        
+    if (strncmp(resposta_servidor, sucesso, strlen(sucesso)) == 0) {
+        printf("Login bem sucedido!\n");
+        confirmacao_servidor = 1;
+    } else {
+        printf("%s", resposta_servidor);
+    }
+    
+    return confirmacao_servidor;
 }

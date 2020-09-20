@@ -30,7 +30,7 @@ void* func_thread_servidor(void *);
 
 void inicializar_clientes(Cliente *);
 
-void auth_cliente(Cliente *);
+int auth_cliente(Cliente *);
 
 void registrar_cliente(Cliente *);
 
@@ -139,19 +139,16 @@ void aceitar_conexoes(Servidor *servidor) {
         cliente.IP = inet_ntoa(cliente.cfg_cliente.sin_addr);
         cliente.PORTA = ntohs(cliente.cfg_cliente.sin_port);
 
-        if (total_conexoes < MAX_CONEXOES) {
+        if (total_conexoes < MAX_CONEXOES && auth_cliente(&cliente) == 1) {
             registrar_cliente(&cliente);
+            *p_cliente = cliente;
+            pthread_create(&server_thread, NULL, func_thread_servidor, (void *) p_cliente);
         } else {
-            printf("[Máx.Clientes] Conexão rejeitada - IP: %s PORTA: %d\n", cliente.IP, cliente.PORTA);
+            printf("Conexão rejeitada - IP: %s PORTA: %d\n", cliente.IP, cliente.PORTA);
             char *mensagem_status = "Máximo de clientes alcaçado\n";
             enviar_resposta(&cliente, mensagem_status);
             close(cliente.cliente_socket);
-            continue;
         }
-
-        *p_cliente = cliente;
-
-        pthread_create(&server_thread, NULL, func_thread_servidor, (void *) p_cliente);
     }
 }
 
@@ -161,34 +158,33 @@ void inicializar_clientes(Cliente *clientes) {
     }
 }
 
-void auth_cliente(Cliente *cliente) {
+int auth_cliente(Cliente *cliente) {
     int status = 0;
 
-    while (1) {
-        recv(cliente->cliente_socket, cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente), 0);
-        strncpy(cliente->usuario, cliente->mensagem_cliente, sizeof(cliente->usuario));
-        limpar_buffer_mensagem(cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente));
+    recv(cliente->cliente_socket, cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente), 0);
+    strncpy(cliente->usuario, cliente->mensagem_cliente, sizeof(cliente->usuario));
+    limpar_buffer_mensagem(cliente->mensagem_cliente, sizeof(cliente->mensagem_cliente));
 
-        for (int i = 0; i < MAX_CONEXOES; i++) {
-            if (strcmp(clientes[i].usuario, cliente->usuario) == 0) {
-                char *resposta = "usuário já cadastrado, tente novamente.\r\n";
-                enviar_resposta(cliente, resposta);
-                status = 0;
-                break;
-            }
-            status++;
-        }
-
-        if (status == MAX_CONEXOES) {
-            break;
+    for (int i = 0; i < MAX_CONEXOES; i++) {
+        if (strcmp(clientes[i].usuario, cliente->usuario) == 0) {
+            char *resposta = "usuário já cadastrado, tente novamente.\r\n";
+            enviar_resposta(cliente, resposta);
+            close(cliente->cliente_socket);
+            limpar_buffer_cliente(cliente->cliente_socket);
+            return status;
         }
     }
+
+    char *resposta = "sucesso\r\n";
+    enviar_resposta(cliente, resposta);
+    status = 1;
+
+    return status;
 }
 
 void registrar_cliente(Cliente *novo_cliente) {
     for (int i = 0; i < MAX_CONEXOES; i++) {
         if (clientes[i].cliente_socket <= 0) {
-            auth_cliente(novo_cliente);
             clientes[i] = *novo_cliente;
             total_conexoes++;
             break;
