@@ -8,7 +8,7 @@ Implementação de uma aplicação de chat utilizando sockets na linguagem de pr
 
 ### Cliente
       - make client
-      - ./cliente/cliente <IP> <PORTA> <USUARIO>
+      - ./cliente <IP> <PORTA> <USUARIO>
       - comandos:
             - listar usuários -> :listar
             - mensagem privada -> :enviar <msg> usuario_dest
@@ -16,7 +16,7 @@ Implementação de uma aplicação de chat utilizando sockets na linguagem de pr
 
 ### Servidor
       - make server
-      - ./servidor/servidor <PORTA>
+      - ./servidor <PORTA>
 
 ## Progresso (Arquitetura do Sistema)
 
