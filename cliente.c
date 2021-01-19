@@ -13,7 +13,7 @@
 
 typedef struct cliente {
     char *usuario;
-    uint32_t cliente_socket;
+    uint16_t cliente_socket;
 } Cliente;
 
 typedef struct servidor {
