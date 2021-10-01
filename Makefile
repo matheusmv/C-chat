@@ -1,15 +1,16 @@
 all:
-	gcc cliente.c -lpthread -o cliente
-	gcc servidor.c -lpthread -o servidor
+	gcc client.c -lpthread -o client
+	gcc server.c -lpthread -o server
+
 
 client:
-	gcc cliente.c -lpthread -o cliente
+	gcc client.c -lpthread -o client
 
 
 server:
-	gcc servidor.c -lpthread -o servidor
+	gcc server.c -lpthread -o server
 
 
 clean:
-	rm cliente
-	rm servidor
+	rm client
+	rm server
