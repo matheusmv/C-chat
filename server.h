@@ -6,11 +6,13 @@
 #define BACKLOG 5
 #define MAX_CONNECTIONS 5
 
+/* error messages */
 #define MAX_LIMIT_MESSAGE "limit of simultaneous connections reached.\r\n"
 #define AUTH_FAILURE_MESSAGE "username already registered, try again.\r\n"
 #define NO_USERS_ONLINE_MESSAGE "there are no users online.\r\n"
 #define PRIVATE_MESSAGE_FAILURE "user is not currently online or username is invalid.\r\n"
 
+/* client commands */
 #define LIST_ONLINE_CLIENTS ":list:\r\n"
 #define SEND_PRIVATE_MESSAGE ":send:"
 
@@ -20,7 +22,6 @@ struct client {
         uint16_t port;
         SOCKET socket;
         char message[BUFFER_SIZE];
-        struct sockaddr_in client_details;
 };
 
 static void init_clients();

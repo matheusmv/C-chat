@@ -62,6 +62,8 @@ void start_server(const uint16_t port)
 
         init_clients();
 
+        struct sockaddr_in client_details;
+
         int addrlen = sizeof(struct sockaddr_in);
 
         pthread_t server_thread;
@@ -70,9 +72,11 @@ void start_server(const uint16_t port)
         {
                 Client new_client = *(Client *) calloc(1, sizeof(Client));
 
+                memset(&client_details, 0, sizeof(client_details));
+
                 new_client.socket = accept(
                         s_socket,
-                        (struct sockaddr *) &new_client.client_details,
+                        (struct sockaddr *) &client_details,
                         (socklen_t *) &addrlen);
 
                 if (!ISVALIDSOCKET(new_client.socket)) {
@@ -80,8 +84,8 @@ void start_server(const uint16_t port)
                         exit(EXIT_FAILURE);
                 }
 
-                new_client.address = inet_ntoa(new_client.client_details.sin_addr);
-                new_client.port = ntohs(new_client.client_details.sin_port);
+                new_client.address = inet_ntoa(client_details.sin_addr);
+                new_client.port = ntohs(client_details.sin_port);
 
                 if (TOTAL_CONNECTIONS == MAX_CONNECTIONS) {
                         send_message(new_client.socket, MAX_LIMIT_MESSAGE);
@@ -213,6 +217,7 @@ static void list_online_clients(const uint16_t client_socket)
 
 static void build_message(const struct client *client, char *message)
 {
+        /* Msg of 'username' ['address':'port']:[Fri Oct  1 11:45:12 2021] 'message' */
         char port[6];
         char sent_at[50];
 

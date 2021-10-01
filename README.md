@@ -10,8 +10,9 @@ Implementação de uma aplicação de chat utilizando sockets na linguagem de pr
       - make client
       - ./cliente <IP> <PORTA> <USUARIO>
       - comandos:
-            - listar usuários -> :listar
-            - mensagem privada -> :enviar <msg> usuario_dest
+            - desconectar -> :exit:
+            - listar usuários -> :list:
+            - mensagem privada -> :send: <msg> username
             - mensagem pública -> qualquer texto diferente dos comandos acima será enviado publicamente.
 
 ### Servidor

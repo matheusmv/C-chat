@@ -61,7 +61,7 @@ static int server_auth(const int client_socket, const char *username)
 
 static void *client_send_thr(void *arg)
 {
-        SOCKET client_socket = *(SOCKET *) arg;
+        SOCKET *client_socket = arg;
 
         char client_input[BUFFER_SIZE];
         char final_message[BUFFER_SIZE];
@@ -76,12 +76,13 @@ static void *client_send_thr(void *arg)
                 strncat(final_message, client_input, (strlen(client_input) - 1));
                 strncat(final_message, "\r\n", sizeof("\r\n"));
 
-                if (send(client_socket, final_message, strlen(final_message), 0) < 0) {
+                if (send(*client_socket, final_message, strlen(final_message), 0) < 0) {
                         fprintf(stderr, "send() failed. (%d)\n", GETSOCKETERRNO());
                 }
 
                 if (strncmp(final_message, DISCONNECT, strlen(DISCONNECT)) == 0) {
-                        close(client_socket);
+                        close(*client_socket);
+                        client_socket = NULL;
                         return NULL;
                 }
         }
@@ -91,7 +92,7 @@ static void *client_send_thr(void *arg)
 
 static void *client_recv_thr(void *arg)
 {
-        SOCKET client_socket = *(SOCKET *) arg;
+        SOCKET *client_socket = arg;
 
         char server_response[BUFFER_SIZE];
 
@@ -99,13 +100,15 @@ static void *client_recv_thr(void *arg)
         {
                 memset(server_response, 0, sizeof(server_response));
 
-                if (recv(client_socket, server_response, sizeof(server_response), 0) < 0) {
+                if (recv(*client_socket, server_response, sizeof(server_response), 0) < 0) {
                         fprintf(stderr, "recv() failed. (%d)\n", GETSOCKETERRNO());
                         return NULL;
                 }
 
                 if (strncmp(server_response, DISCONNECT, strlen(DISCONNECT)) == 0) {
-                        close(client_socket);
+                        printf("disconnected from server.\n");
+                        close(*client_socket);
+                        client_socket = NULL;
                         return NULL;
                 }
 
