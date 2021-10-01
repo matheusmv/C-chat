@@ -2,6 +2,10 @@
 
 Implementação de uma aplicação de chat utilizando sockets na linguagem de programação C.
 
+## TODO
+
+ - [ ] corrigir erro que ocorre quando a aplicação cliente é encerrada utilizando Ctrl + c
+
 ## Executando o programa
 
 - [gcc](https://gcc.gnu.org/)
