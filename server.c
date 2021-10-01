@@ -12,13 +12,6 @@ Client CONNECTED_CLIENTS[MAX_CONNECTIONS];
 
 static int TOTAL_CONNECTIONS = 0;
 
-static void init_clients()
-{
-        for (int i = 0; i < MAX_CONNECTIONS; i++) {
-                CONNECTED_CLIENTS[i] = *(Client *) calloc(1, sizeof(Client));
-        }
-}
-
 static void increase_total_connections()
 {
         TOTAL_CONNECTIONS++;
@@ -60,44 +53,53 @@ void start_server(const uint16_t port)
 
         printf("server running on port %d\n", ntohs(server.sin_port));
 
-        init_clients();
-
         struct sockaddr_in client_details;
 
         int addrlen = sizeof(struct sockaddr_in);
 
-        pthread_t server_thread;
+        Client *new_client = NULL;
 
         while (1)
         {
-                Client new_client = *(Client *) calloc(1, sizeof(Client));
+                if (new_client != NULL) {
+                        free(new_client);
+                        new_client = NULL;
+                }
 
                 memset(&client_details, 0, sizeof(client_details));
 
-                new_client.socket = accept(
+                int c_socket = accept(
                         s_socket,
                         (struct sockaddr *) &client_details,
                         (socklen_t *) &addrlen);
 
-                if (!ISVALIDSOCKET(new_client.socket)) {
+                if (!ISVALIDSOCKET(c_socket)) {
                         fprintf(stderr, "accept() failed. (%d)\n", GETSOCKETERRNO());
                         exit(EXIT_FAILURE);
                 }
 
-                new_client.address = inet_ntoa(client_details.sin_addr);
-                new_client.port = ntohs(client_details.sin_port);
+                new_client = malloc(sizeof(Client));
+
+                new_client->socket = c_socket;
+                new_client->address = inet_ntoa(client_details.sin_addr);
+                new_client->port = ntohs(client_details.sin_port);
 
                 if (TOTAL_CONNECTIONS == MAX_CONNECTIONS) {
-                        send_message(new_client.socket, MAX_LIMIT_MESSAGE);
-                        disconnect_client(&new_client);
+                        send_message(new_client->socket, MAX_LIMIT_MESSAGE);
+                        disconnect_client(new_client);
                         continue;
                 }
 
-                if (client_auth(&new_client) > 0) {
-                        pthread_create(&server_thread,
-                                       NULL,
+                if (client_auth(new_client) > 0) {
+                        pthread_attr_t attr;
+                        pthread_attr_init(&attr);
+                        pthread_attr_setdetachstate(&attr,
+                                                    PTHREAD_CREATE_DETACHED);
+                        pthread_create(&new_client->tid,
+                                       &attr,
                                        server_thread_func,
-                                       (void *) register_client(&new_client));
+                                       (void *) register_client(new_client));
+                        pthread_attr_destroy(&attr);
                 }
         }
 }
@@ -133,8 +135,8 @@ static struct client *register_client(struct client *client)
 {
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
                 if (CONNECTED_CLIENTS[i].socket <= 0) {
-                        increase_total_connections();
                         CONNECTED_CLIENTS[i] = *client;
+                        increase_total_connections();
                         return &CONNECTED_CLIENTS[i];
                 }
         }
@@ -155,6 +157,13 @@ static void *server_thread_func(void *arg)
                         return NULL;
                 }
 
+                if (strncmp(client->message, DISCONNECT, strlen(DISCONNECT)) == 0) {
+                        send_message(client->socket, DISCONNECT);
+                        disconnect_client(client);
+                        client = NULL;
+                        return NULL;
+                }
+
                 if (strncmp(client->message, LIST_ONLINE_CLIENTS, strlen(LIST_ONLINE_CLIENTS)) == 0) {
                         list_online_clients(client->socket);
                         memset(client->message, 0, sizeof(client->message));
@@ -164,13 +173,6 @@ static void *server_thread_func(void *arg)
                 if (strncmp(client->message, SEND_PRIVATE_MESSAGE, strlen(SEND_PRIVATE_MESSAGE)) == 0) {
                         send_private_message(client);
                         continue;
-                }
-
-                if (strncmp(client->message, DISCONNECT, strlen(DISCONNECT)) == 0) {
-                        send_message(client->socket, DISCONNECT);
-                        disconnect_client(client);
-                        client = NULL;
-                        return NULL;
                 }
 
                 printf("[%s:%d] %s >>> %s",
@@ -335,12 +337,19 @@ static void disconnect_client(struct client *client)
 {
         printf("client disconnects - IP: %s PORT: %d\n", client->address, client->port);
 
+        shutdown(client->socket, SHUT_RDWR);
         close(client->socket);
 
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
                 if (CONNECTED_CLIENTS[i].socket == client->socket) {
-                        CONNECTED_CLIENTS[i] = *(Client *) calloc(1, sizeof(Client));
+                        memset(CONNECTED_CLIENTS[i].username, 0, sizeof(CONNECTED_CLIENTS[i].username));
+                        CONNECTED_CLIENTS[i].address = "";
+                        CONNECTED_CLIENTS[i].port = 0;
+                        CONNECTED_CLIENTS[i].socket = 0;
+                        memset(CONNECTED_CLIENTS[i].message, 0, sizeof(CONNECTED_CLIENTS[i].message));
+
                         decrement_total_connections();
+
                         break;
                 }
         }

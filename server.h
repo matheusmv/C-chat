@@ -22,6 +22,7 @@ struct client {
         uint16_t port;
         SOCKET socket;
         char message[BUFFER_SIZE];
+        pthread_t tid;
 };
 
 static void init_clients();
