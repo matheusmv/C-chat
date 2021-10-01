@@ -53,6 +53,7 @@ static int server_auth(const int client_socket, const char *username)
                 printf("Login successful!\n");
                 auth_status = 1;
         } else {
+                printf("Login failed!\n");
                 printf("%s", server_response);
         }
 
@@ -76,15 +77,13 @@ static void *client_send_thr(void *arg)
                 strncat(final_message, client_input, (strlen(client_input) - 1));
                 strncat(final_message, "\r\n", sizeof("\r\n"));
 
-                if (send(*client_socket, final_message, strlen(final_message), 0) < 0) {
-                        fprintf(stderr, "send() failed. (%d)\n", GETSOCKETERRNO());
-                }
-
                 if (strncmp(final_message, DISCONNECT, strlen(DISCONNECT)) == 0) {
-                        close(*client_socket);
+                        send_message(*client_socket, DISCONNECT);
                         client_socket = NULL;
                         return NULL;
                 }
+
+                send_message(*client_socket, final_message);
         }
 
         return NULL;
@@ -116,6 +115,14 @@ static void *client_recv_thr(void *arg)
         }
 
         return NULL;
+}
+
+static void send_message(const uint16_t client_socket, const char *message)
+{
+        if (send(client_socket, message, strlen(message), 0) < 0) {
+                fprintf(stderr, "send() failed. (%d)\n", GETSOCKETERRNO());
+                exit(EXIT_FAILURE);
+        };
 }
 
 int main(int argc, char *argv[])
