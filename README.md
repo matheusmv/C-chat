@@ -1,9 +1,6 @@
 # C-chat
+
 Implementação de uma aplicação de chat utilizando sockets na linguagem de programação C.
-
-## TODO
-
- - [ ] fix memory leak on server
 
 ## Executando o programa
 
