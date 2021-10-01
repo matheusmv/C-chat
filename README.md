@@ -12,7 +12,7 @@ Implementação de uma aplicação de chat utilizando sockets na linguagem de pr
 
 ### Cliente
       - make client
-      - ./cliente <IP> <PORTA> <USUARIO>
+      - ./client server_ip server_port username
       - comandos:
             - desconectar -> :exit:
             - listar usuários -> :list:
@@ -21,4 +21,4 @@ Implementação de uma aplicação de chat utilizando sockets na linguagem de pr
 
 ### Servidor
       - make server
-      - ./servidor <PORTA>
+      - ./server server_port
