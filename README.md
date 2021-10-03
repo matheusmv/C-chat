@@ -4,18 +4,43 @@ Implementação de uma aplicação de chat utilizando sockets na linguagem de pr
 
 ## Executando o programa
 
-- [gcc](https://gcc.gnu.org/)
-- [make](https://www.gnu.org/software/make/)
+ - [gcc](https://gcc.gnu.org/)
+ - [make](https://www.gnu.org/software/make/)
+
+### Compilando
+
+ - Makefile:
+
+       git clone https://github.com/matheusmv/C-chat.git && cd C-chat && make
+
+ - Terminal:
+
+       git clone https://github.com/matheusmv/C-chat.git && cd C-chat
+      
+       cc -O2 -pedantic-errors -Wall -Werror -std=c11  client.c -o client -lpthread
+      
+       cc -O2 -pedantic-errors -Wall -Werror -std=c11  server.c -o server -lpthread
 
 ### Cliente
-      - make client
-      - ./client server_ip server_port username
-      - comandos:
-            - desconectar -> :exit:
-            - listar usuários -> :list:
-            - mensagem privada -> :send: <msg> username
-            - mensagem pública -> qualquer texto diferente dos comandos acima será enviado publicamente.
+
+      ./client server_ip server_port username
+      
+ - Comandos:
+ 
+      - deconectar:
+
+            :exit:
+            
+      - listar usuários online:
+
+            :list:
+
+      - enviar mensagem privada:
+
+            :send: <msg> username
+   
+      - mensagem pública: qualquer texto diferente dos comandos acima será enviado publicamente.
 
 ### Servidor
-      - make server
-      - ./server server_port
+
+      ./server server_port
