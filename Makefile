@@ -1,16 +1,21 @@
-all:
-	gcc client.c -lpthread -o client
-	gcc server.c -lpthread -o server
+CFLAGS=-O2 \
+	-pedantic-errors \
+	-Wall \
+	-Werror \
+	-std=c11 \
 
+CLIENTBIN=client
+SERVERBIN=server
 
-client:
-	gcc client.c -lpthread -o client
+all: release
 
+debug: CFLAGS += -ggdb
+debug: all
 
-server:
-	gcc server.c -lpthread -o server
-
+release:
+	$(CC) $(CFLAGS) client.c -o $(CLIENTBIN) -lpthread
+	$(CC) $(CFLAGS) server.c -o $(SERVERBIN) -lpthread
 
 clean:
-	rm client
-	rm server
+	rm $(CLIENTBIN)
+	rm $(SERVERBIN)

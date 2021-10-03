@@ -1,10 +1,5 @@
 #include "client.h"
 
-#include <pthread.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
 void conect_to_server(const char *address, const uint16_t port, const char *username)
 {
         struct sockaddr_in server;
@@ -74,8 +69,8 @@ static void *client_send_thr(void *arg)
 
                 fgets(client_input, sizeof(client_input), stdin);
 
-                strncat(final_message, client_input, (strlen(client_input) - 1));
-                strncat(final_message, "\r\n", sizeof("\r\n"));
+                strncat(final_message, client_input,
+                        (BUFFER_SIZE - strlen(final_message) - 1));
 
                 if (strncmp(final_message, DISCONNECT, strlen(DISCONNECT)) == 0) {
                         send_message(*client_socket, DISCONNECT);
@@ -99,7 +94,7 @@ static void *client_recv_thr(void *arg)
         {
                 memset(server_response, 0, sizeof(server_response));
 
-                if (recv(*client_socket, server_response, sizeof(server_response), 0) < 0) {
+                if (recv(*client_socket, server_response, sizeof(server_response), 0) <= 0) {
                         fprintf(stderr, "recv() failed. (%d)\n", GETSOCKETERRNO());
                         return NULL;
                 }

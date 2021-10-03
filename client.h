@@ -3,6 +3,11 @@
 
 #include "network.h"
 
+#include <pthread.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
 void conect_to_server(const char *, const uint16_t, const char *);
 static int server_auth(const int, const char *);
 static void *client_send_thr(void *);

@@ -16,7 +16,7 @@
 
 #define BUFFER_SIZE 1024
 
-#define SUCCESS_MESSSAGE ":success:\r\n"
-#define DISCONNECT ":exit:\r\n"
+#define SUCCESS_MESSSAGE ":success:"
+#define DISCONNECT ":exit:"
 
 #endif
