@@ -1,5 +1,10 @@
 #include "client.h"
 
+static int server_auth(const int, const char *);
+static void *client_send_thr(void *);
+static void *client_recv_thr(void *);
+static void send_message(const uint16_t, const char *);
+
 void conect_to_server(const char *address, const uint16_t port, const char *username)
 {
         struct sockaddr_in server;
@@ -118,16 +123,4 @@ static void send_message(const uint16_t client_socket, const char *message)
                 fprintf(stderr, "send() failed. (%d)\n", GETSOCKETERRNO());
                 exit(EXIT_FAILURE);
         };
-}
-
-int main(int argc, char *argv[])
-{
-        if (argc < 4) {
-                fprintf(stderr, "usage: ./client server_ip server_port username\n");
-                exit(EXIT_FAILURE);
-        }
-
-        conect_to_server(argv[1], (uint16_t) atoi(argv[2]), argv[3]);
-
-        return EXIT_SUCCESS;
 }

@@ -31,18 +31,6 @@ struct client {
         pthread_t tid;
 };
 
-static void increase_total_connections();
-static void decrement_total_connections();
 void start_server(const uint16_t);
-static int client_auth(struct client *);
-static struct client *register_client(struct client *);
-static void *server_thread_func(void *);
-static void list_online_clients(struct client *);
-static void build_message(const struct client *, char *, size_t);
-static void get_current_time(char *, size_t);
-static void send_public_message(struct client *);
-static void send_private_message(struct client *);
-static void disconnect_client(struct client *);
-static void send_message(const uint16_t, const char *);
 
 #endif
