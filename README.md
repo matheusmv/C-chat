@@ -1,6 +1,6 @@
 # C-chat
 
-Implementação de uma aplicação de chat utilizando sockets na linguagem de programação C.
+chat utilizando sockets na linguagem de programação C.
 
 ## Executando o programa
 
@@ -27,7 +27,7 @@ Implementação de uma aplicação de chat utilizando sockets na linguagem de pr
       
  - Comandos:
  
-      - deconectar:
+      - desconectar:
 
             :exit:
             
