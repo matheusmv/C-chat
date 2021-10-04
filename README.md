@@ -23,7 +23,7 @@ chat utilizando sockets na linguagem de programação C.
 
 ### Cliente
 
-      ./client server_ip server_port username
+      ./client -a ip -p port -u username
       
  - Comandos:
  
@@ -43,4 +43,4 @@ chat utilizando sockets na linguagem de programação C.
 
 ### Servidor
 
-      ./server server_port
+      ./server -p port

@@ -2,21 +2,23 @@
 
 typedef struct client Client;
 
+static void increase_total_connections();
+static void decrement_total_connections();
+static int client_auth(struct client *);
+static struct client *register_client(struct client *);
+static void *server_thread_func(void *);
+static void list_online_clients(struct client *);
+static void build_message(const struct client *, char *, size_t);
+static void get_current_time(char *, size_t);
+static void send_public_message(struct client *);
+static void extract_username_and_message(char *, char *, char *);
+static void send_private_message(struct client *);
+static void disconnect_client(struct client *);
+static void send_message(const uint16_t, const char *);
+
 Client CONNECTED_CLIENTS[MAX_CONNECTIONS];
 
 static int TOTAL_CONNECTIONS = 0;
-
-static void increase_total_connections()
-{
-        TOTAL_CONNECTIONS++;
-}
-
-static void decrement_total_connections()
-{
-        if (TOTAL_CONNECTIONS > 0) {
-                TOTAL_CONNECTIONS--;
-        }
-}
 
 void start_server(const uint16_t port)
 {
@@ -95,6 +97,18 @@ void start_server(const uint16_t port)
                                        (void *) register_client(new_client));
                         pthread_attr_destroy(&attr);
                 }
+        }
+}
+
+static void increase_total_connections()
+{
+        TOTAL_CONNECTIONS++;
+}
+
+static void decrement_total_connections()
+{
+        if (TOTAL_CONNECTIONS > 0) {
+                TOTAL_CONNECTIONS--;
         }
 }
 
@@ -421,16 +435,4 @@ static void send_message(const uint16_t client_socket, const char *message)
         if (send(client_socket, message, strlen(message), 0) < 0) {
                 fprintf(stderr, "send() failed. (%d)\n", GETSOCKETERRNO());
         };
-}
-
-int main(int argc, char *argv[])
-{
-        if (argc < 2) {
-                fprintf(stderr, "usage: ./server server_port\n");
-                exit(EXIT_FAILURE);
-        }
-
-        start_server((uint16_t) atoi(argv[1]));
-
-        return EXIT_SUCCESS;
 }
