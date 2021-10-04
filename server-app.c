@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
         while ((optc = getopt_long(argc, argv, "p:", LongOptions, NULL)) != -1) {
                 switch (optc) {
                 case 'p':
-                        if (!validate_ipv4(optarg)) {
+                        if (!validate_port(optarg)) {
                                 fprintf(stderr, "invalid port\n");
                                 exit(EXIT_FAILURE);
                         }
