@@ -16,29 +16,29 @@ chat utilizando sockets na linguagem de programação C.
  - Terminal:
 
        git clone https://github.com/matheusmv/C-chat.git && cd C-chat
-      
+
        cc -O2 -pedantic-errors -Wall -Werror -std=c11  client.c -o client -lpthread
-      
+
        cc -O2 -pedantic-errors -Wall -Werror -std=c11  server.c -o server -lpthread
 
 ### Cliente
 
       ./client -a ip -p port -u username
-      
+
  - Comandos:
- 
+
       - desconectar:
 
             :exit:
-            
+
       - listar usuários online:
 
             :list:
 
       - enviar mensagem privada:
 
-            :send: <msg> username
-   
+            :send: -u username -m message
+
       - mensagem pública: qualquer texto diferente dos comandos acima será enviado publicamente.
 
 ### Servidor

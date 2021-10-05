@@ -17,6 +17,7 @@
 #define AUTH_FAILURE_MESSAGE "username already registered, try again.\r\n"
 #define NO_USERS_ONLINE_MESSAGE "there are no users online.\r\n"
 #define PRIVATE_MESSAGE_FAILURE "user is not currently online or username is invalid.\r\n"
+#define INVALID_MESSAGE_FORMAT "usage: :send: -u username -m message.\r\n"
 
 /* commands */
 #define LIST_ONLINE_CLIENTS ":list:"

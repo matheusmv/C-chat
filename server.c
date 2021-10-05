@@ -11,7 +11,7 @@ static void list_online_clients(struct client *);
 static void build_message(const struct client *, char *, size_t);
 static void get_current_time(char *, size_t);
 static void send_public_message(struct client *);
-static void extract_username_and_message(char *, char *, char *);
+static int extract_username_and_message(const char *, char *, char *);
 static void send_private_message(struct client *);
 static void disconnect_client(struct client *);
 static void send_message(const uint16_t, const char *);
@@ -330,34 +330,50 @@ static void send_public_message(struct client *client)
         memset(client->message, 0, sizeof(client->message));
 }
 
-static void extract_username_and_message(char *message_rcvd, char *username, char *message)
+static int extract_username_and_message(const char *message_rcvd, char *username, char *message)
 {
-        const int message_length = strlen(message_rcvd);
+        char username_buffer[BUFFER_SIZE];
+        char message_buffer[BUFFER_SIZE];
 
-        /* :send: <message> username */
-        for (int i = 0; i < message_length; i++) {
-                if (message_rcvd[i] == '<') {
-                        i += 1;
-                        int aux = 0;
+        memset(username_buffer, 0, sizeof(username_buffer));
+        memset(message_buffer, 0, sizeof(message_buffer));
 
-                        while (message_rcvd[i] != '>')
-                        {
-                                message[aux++] = message_rcvd[i++];
-                        }
+        strncpy(username_buffer, message_rcvd,
+                (BUFFER_SIZE - strlen(message_rcvd) - 1));
+        strncpy(message_buffer, message_rcvd,
+                (BUFFER_SIZE - strlen(message_rcvd) - 1));
 
-                        strncat(message, "\n", strlen(message));
-                }
+        const char *utoken = "-u ";
+        const char *mtoken = "-m ";
 
-                if (message_rcvd[i] == '>') {
-                        i += 2;
-                        int aux = 0;
+        char *usr = strstr(username_buffer, utoken);
+        char *msg = strstr(message_buffer, mtoken);
 
-                        while (message_rcvd[i] != '\n')
-                        {
-                                username[aux++] = message_rcvd[i++];
-                        }
-                }
+        if (usr == NULL || msg == NULL) {
+                return -1;
         }
+
+        const int msg_start = strlen(mtoken);
+        const int msg_end = strlen(msg);
+        const int usr_start = strlen(utoken);
+        const int usr_end = strlen(usr) - msg_end - 1;
+
+        if (strlen(usr) < strlen(msg)) {
+                return -1;
+        }
+
+        for (int i = usr_start, j = 0; i < usr_end; i++, j++) {
+                username[j] = usr[i];
+        }
+
+        for (int i = msg_start, j = 0; i < msg_end; i++, j++) {
+                message[j] = msg[i];
+        }
+
+        memset(username_buffer, 0, sizeof(username_buffer));
+        memset(message_buffer, 0, sizeof(message_buffer));
+
+        return 0;
 }
 
 static void send_private_message(struct client *client)
@@ -374,16 +390,24 @@ static void send_private_message(struct client *client)
         memset(message, 0, sizeof(message));
         memset(dest_username, 0, sizeof(dest_username));
 
-        extract_username_and_message(client->message, dest_username, message);
+        status = extract_username_and_message(client->message,
+                                              dest_username,
+                                              message);
+
+        if (status < 0) {
+                memset(client->message, 0, sizeof(client->message));
+                send_message(client->socket, INVALID_MESSAGE_FORMAT);
+                return;
+        }
 
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
                 if (strncmp(CONNECTED_CLIENTS[i].username,
                             dest_username,
                             sizeof(CONNECTED_CLIENTS[i].username)) == 0) {
 
+                        memset(client->message, 0, sizeof(client->message));
                         strncpy(client->message, message, sizeof(client->message));
                         build_message(client, message, sizeof(message));
-
                         send_message(CONNECTED_CLIENTS[i].socket, message);
 
                         status = 1;
@@ -396,7 +420,7 @@ static void send_private_message(struct client *client)
         memset(dest_username, 0, sizeof(dest_username));
         memset(client->message, 0, sizeof(client->message));
 
-        if (status < 0) {
+        if (status == 0) {
                 send_message(client->socket, PRIVATE_MESSAGE_FAILURE);
         }
 }
