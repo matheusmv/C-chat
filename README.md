@@ -17,9 +17,9 @@ chat utilizando sockets na linguagem de programação C.
 
        git clone https://github.com/matheusmv/C-chat.git && cd C-chat
 
-       cc -O2 -pedantic-errors -Wall -Werror -std=c11 utils.c client.c client-app.c -o client -lpthread
+       gcc -O2 -pedantic-errors -Wall -Werror utils.c client.c client-app.c -o client -lpthread
 
-       cc -O2 -pedantic-errors -Wall -Werror -std=c11 utils.c server.c server-app.c -o server -lpthread
+       gcc -O2 -pedantic-errors -Wall -Werror utils.c server.c server-app.c -o server -lpthread
 
 ### Cliente
 

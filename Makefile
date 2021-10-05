@@ -1,8 +1,9 @@
+CC=gcc
+
 CFLAGS=-O2 \
 	-pedantic-errors \
 	-Wall \
 	-Werror \
-	-std=c11 \
 
 CLIENTBIN=client
 SERVERBIN=server
