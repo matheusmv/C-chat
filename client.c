@@ -55,6 +55,7 @@ static int server_auth(const int client_socket, const char *username)
         } else {
                 printf("Login failed!\n");
                 printf("%s", server_response);
+                CLOSESOCKET(client_socket);
         }
 
         return auth_status;
@@ -67,8 +68,7 @@ static void *client_send_thr(void *arg)
         char client_input[BUFFER_SIZE];
         char final_message[BUFFER_SIZE];
 
-        while (1)
-        {
+        while (1) {
                 memset(client_input, 0, sizeof(client_input));
                 memset(final_message, 0, sizeof(final_message));
 
@@ -95,8 +95,7 @@ static void *client_recv_thr(void *arg)
 
         char server_response[BUFFER_SIZE];
 
-        while (1)
-        {
+        while (1) {
                 memset(server_response, 0, sizeof(server_response));
 
                 if (recv(*client_socket, server_response, sizeof(server_response), 0) <= 0) {
@@ -106,7 +105,7 @@ static void *client_recv_thr(void *arg)
 
                 if (strncmp(server_response, DISCONNECT, strlen(DISCONNECT)) == 0) {
                         printf("disconnected from server.\n");
-                        close(*client_socket);
+                        CLOSESOCKET(*client_socket);
                         client_socket = NULL;
                         return NULL;
                 }
@@ -122,5 +121,5 @@ static void send_message(const uint16_t client_socket, const char *message)
         if (send(client_socket, message, strlen(message), 0) < 0) {
                 fprintf(stderr, "send() failed. (%d)\n", GETSOCKETERRNO());
                 exit(EXIT_FAILURE);
-        };
+        }
 }

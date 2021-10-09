@@ -6,11 +6,6 @@
 
 int main(int argc, char *argv[])
 {
-        if (argc < 2) {
-                fprintf(stderr, "usage: ./server -p port\n");
-                exit(EXIT_FAILURE);
-        }
-
         char *server_port = "";
 
         char optc = 0;

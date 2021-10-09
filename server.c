@@ -55,8 +55,7 @@ void start_server(const uint16_t port)
 
         Client *new_client = NULL;
 
-        while (1)
-        {
+        while (1) {
                 if (new_client != NULL) {
                         free(new_client);
                         new_client = NULL;
@@ -164,20 +163,10 @@ static void *server_thread_func(void *arg)
 
         printf("Client connected - IP: %s PORT: %d\n", client->address, client->port);
 
-        while (1)
-        {
-                if (recv(client->socket, client->message, sizeof(client->message), 0) <= 0) {
-                        fprintf(stderr, "recv() failed. (%d)\n", GETSOCKETERRNO());
-                        disconnect_client(client);
-                        client = NULL;
-                        return NULL;
-                }
-
-                if (strncmp(client->message, DISCONNECT, strlen(DISCONNECT)) == 0) {
-                        send_message(client->socket, DISCONNECT);
-                        disconnect_client(client);
-                        client = NULL;
-                        return NULL;
+        while (recv(client->socket, client->message, sizeof(client->message), 0) > 0) {
+                if (strncmp(client->message, SEND_PRIVATE_MESSAGE, strlen(SEND_PRIVATE_MESSAGE)) == 0) {
+                        send_private_message(client);
+                        continue;
                 }
 
                 if (strncmp(client->message, LIST_ONLINE_CLIENTS, strlen(LIST_ONLINE_CLIENTS)) == 0) {
@@ -185,9 +174,11 @@ static void *server_thread_func(void *arg)
                         continue;
                 }
 
-                if (strncmp(client->message, SEND_PRIVATE_MESSAGE, strlen(SEND_PRIVATE_MESSAGE)) == 0) {
-                        send_private_message(client);
-                        continue;
+                if (strncmp(client->message, DISCONNECT, strlen(DISCONNECT)) == 0) {
+                        send_message(client->socket, DISCONNECT);
+                        disconnect_client(client);
+                        client = NULL;
+                        return NULL;
                 }
 
                 if (!strncmp(client->message, "\n", strlen("\n")) == 0) {
@@ -199,14 +190,16 @@ static void *server_thread_func(void *arg)
                 }
         }
 
+        fprintf(stderr, "recv() failed. (%d)\n", GETSOCKETERRNO());
+        disconnect_client(client);
+        client = NULL;
+
         return NULL;
 }
 
 static void list_online_clients(struct client *client)
 {
-        if (TOTAL_CONNECTIONS == 1) {
-                send_message(client->socket, NO_USERS_ONLINE_MESSAGE);
-        } else {
+        if (TOTAL_CONNECTIONS > 1) {
                 char message[BUFFER_SIZE];
                 char port[6];
 
@@ -243,7 +236,11 @@ static void list_online_clients(struct client *client)
                 memset(port, 0, sizeof(port));
                 memset(message, 0, sizeof(message));
                 memset(client->message, 0, sizeof(client->message));
+
+                return;
         }
+
+        send_message(client->socket, NO_USERS_ONLINE_MESSAGE);
 }
 
 static void build_message(const struct client *client, char *message, size_t message_size)
@@ -420,7 +417,7 @@ static void send_private_message(struct client *client)
         memset(dest_username, 0, sizeof(dest_username));
         memset(client->message, 0, sizeof(client->message));
 
-        if (status == 0) {
+        if (status < 1) {
                 send_message(client->socket, PRIVATE_MESSAGE_FAILURE);
         }
 }
@@ -430,8 +427,7 @@ static void disconnect_client(struct client *client)
         printf("client disconnects - IP: %s PORT: %d\n",
                client->address, client->port);
 
-        shutdown(client->socket, SHUT_RDWR);
-        close(client->socket);
+        CLOSESOCKET(client->socket);
 
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
                 if (CONNECTED_CLIENTS[i].socket == client->socket) {
@@ -458,5 +454,5 @@ static void send_message(const uint16_t client_socket, const char *message)
 {
         if (send(client_socket, message, strlen(message), 0) < 0) {
                 fprintf(stderr, "send() failed. (%d)\n", GETSOCKETERRNO());
-        };
+        }
 }

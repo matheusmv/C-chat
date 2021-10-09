@@ -6,11 +6,6 @@
 
 int main(int argc, char *argv[])
 {
-        if (argc < 4) {
-                fprintf(stderr, "usage: ./client -a ip -p port -u username\n");
-                exit(EXIT_FAILURE);
-        }
-
         char *server_ip = "";
         char *server_port = "";
         char *username = "";
