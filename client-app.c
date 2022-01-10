@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
         }
 
-        conect_to_server(server_ip, (uint16_t) atoi(server_port), username);
+        start_client(server_ip, (uint16_t) atoi(server_port), username);
 
         return EXIT_SUCCESS;
 }

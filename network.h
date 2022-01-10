@@ -1,6 +1,9 @@
 #ifndef _NETWORK_H
 #define _NETWORK_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
@@ -18,5 +21,7 @@
 
 #define SUCCESS_MESSSAGE ":success:"
 #define DISCONNECT ":exit:"
+
+SOCKET connect_to_server(const char *, const uint16_t);
 
 #endif
