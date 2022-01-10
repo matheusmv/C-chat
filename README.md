@@ -2,12 +2,10 @@
 
     Projeto desenvolvido durante a disciplina de sistemas distribuidos.
 
-## Executando o programa
+## Compilando
 
  - [gcc](https://gcc.gnu.org/)
  - [make](https://www.gnu.org/software/make/)
-
-### Compilando
 
  - Makefile:
 
@@ -20,6 +18,12 @@
        gcc src/includes/*.c src/client/*.c -o client -lpthread
 
        gcc src/includes/*.c src/server/*.c -o server -lpthread
+
+## Executando o programa
+
+### Servidor
+
+      ./server -p port
 
 ### Cliente
 
@@ -40,7 +44,3 @@
             :send: -u username -m message
 
       - mensagem pública: qualquer texto diferente dos comandos acima será enviado publicamente.
-
-### Servidor
-
-      ./server -p port
