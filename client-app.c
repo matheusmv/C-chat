@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
             !validate_port(server_port) ||
             !validate_username(username)) {
 
-                fprintf(stderr, "usage: ./client -a ip -p port -u username\n");
+                fprintf(stderr, "usage: %s -a ip -p port -u username\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
 

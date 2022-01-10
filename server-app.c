@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
         }
 
         if (!validate_port(server_port)) {
-                fprintf(stderr, "usage: ./server -p port\n");
+                fprintf(stderr, "usage: %s -p port\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
 
