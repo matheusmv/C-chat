@@ -3,7 +3,7 @@
 typedef struct client Client;
 
 static void increase_total_connections();
-static void decrement_total_connections();
+static void decrease_total_connections();
 static int client_auth(struct client *);
 static struct client *register_client(struct client *);
 static void *server_thread_func(void *);
@@ -104,7 +104,7 @@ static void increase_total_connections()
         TOTAL_CONNECTIONS++;
 }
 
-static void decrement_total_connections()
+static void decrease_total_connections()
 {
         if (TOTAL_CONNECTIONS > 0) {
                 TOTAL_CONNECTIONS--;
@@ -443,7 +443,7 @@ static void disconnect_client(struct client *client)
                         memset(CONNECTED_CLIENTS[i].message, 0,
                                sizeof(CONNECTED_CLIENTS[i].message));
 
-                        decrement_total_connections();
+                        decrease_total_connections();
 
                         break;
                 }
