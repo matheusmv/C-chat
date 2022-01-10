@@ -5,8 +5,8 @@ CFLAGS=-O2 \
 	-Wall \
 	-Werror \
 
-CLIENTLIBS=utils.c network.c client.c client-app.c
-SERVERLIBS=utils.c network.c server.c server-app.c
+CLIENTLIBS=src/includes/*.c src/client/*.c
+SERVERLIBS=src/includes/*.c src/server/*.c
 
 CLIENTBIN=client
 SERVERBIN=server
