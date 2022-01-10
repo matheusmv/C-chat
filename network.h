@@ -22,6 +22,7 @@
 #define SUCCESS_MESSSAGE ":success:"
 #define DISCONNECT ":exit:"
 
-SOCKET connect_to_server(const char *, const uint16_t);
+SOCKET connect_to_server(const char *address, const uint16_t port);
+SOCKET create_server(const uint16_t port);
 
 #endif

@@ -19,7 +19,7 @@ chat utilizando sockets na linguagem de programação C.
 
        gcc utils.c network.c client.c client-app.c -o client -lpthread
 
-       gcc utils.c server.c server-app.c -o server -lpthread
+       gcc utils.c network.c server.c server-app.c -o server -lpthread
 
 ### Cliente
 

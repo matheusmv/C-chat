@@ -22,32 +22,7 @@ static int TOTAL_CONNECTIONS = 0;
 
 void start_server(const uint16_t port)
 {
-        struct sockaddr_in server;
-
-        memset(&server, 0, sizeof(server));
-
-        server.sin_addr.s_addr = INADDR_ANY;
-        server.sin_family = AF_INET;
-        server.sin_port = htons(port);
-
-        SOCKET s_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-        if (!ISVALIDSOCKET(s_socket)) {
-                fprintf(stderr, "socket() failed. (%d)\n", GETSOCKETERRNO());
-                exit(EXIT_FAILURE);
-        }
-
-        if (bind(s_socket, (struct sockaddr *) &server, sizeof(server)) < 0) {
-                fprintf(stderr, "bind() failed. (%d)\n", GETSOCKETERRNO());
-                exit(EXIT_FAILURE);
-        }
-
-        if (listen(s_socket, BACKLOG) < 0) {
-                fprintf(stderr, "listen() failed. (%d)\n", GETSOCKETERRNO());
-                exit(EXIT_FAILURE);
-        }
-
-        printf("server running on port %d\n", ntohs(server.sin_port));
+        SOCKET s_socket = create_server(port);
 
         struct sockaddr_in client_details;
 
