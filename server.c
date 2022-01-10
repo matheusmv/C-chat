@@ -329,22 +329,11 @@ static void send_public_message(struct client *client)
 
 static int extract_username_and_message(const char *message_rcvd, char *username, char *message)
 {
-        char username_buffer[BUFFER_SIZE];
-        char message_buffer[BUFFER_SIZE];
-
-        memset(username_buffer, 0, sizeof(username_buffer));
-        memset(message_buffer, 0, sizeof(message_buffer));
-
-        strncpy(username_buffer, message_rcvd,
-                (BUFFER_SIZE - strlen(message_rcvd) - 1));
-        strncpy(message_buffer, message_rcvd,
-                (BUFFER_SIZE - strlen(message_rcvd) - 1));
-
         const char *utoken = "-u ";
         const char *mtoken = "-m ";
 
-        char *usr = strstr(username_buffer, utoken);
-        char *msg = strstr(message_buffer, mtoken);
+        char *usr = strstr(message_rcvd, utoken);
+        char *msg = strstr(message_rcvd, mtoken);
 
         if (usr == NULL || msg == NULL) {
                 return -1;
@@ -366,9 +355,6 @@ static int extract_username_and_message(const char *message_rcvd, char *username
         for (int i = msg_start, j = 0; i < msg_end; i++, j++) {
                 message[j] = msg[i];
         }
-
-        memset(username_buffer, 0, sizeof(username_buffer));
-        memset(message_buffer, 0, sizeof(message_buffer));
 
         return 0;
 }
