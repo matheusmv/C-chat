@@ -3,7 +3,7 @@
 typedef struct client Client;
 
 static void increase_total_connections();
-static void decrement_total_connections();
+static void decrease_total_connections();
 static int client_auth(struct client *);
 static struct client *register_client(struct client *);
 static void *server_thread_func(void *);
@@ -22,32 +22,7 @@ static int TOTAL_CONNECTIONS = 0;
 
 void start_server(const uint16_t port)
 {
-        struct sockaddr_in server;
-
-        memset(&server, 0, sizeof(server));
-
-        server.sin_addr.s_addr = INADDR_ANY;
-        server.sin_family = AF_INET;
-        server.sin_port = htons(port);
-
-        SOCKET s_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-        if (!ISVALIDSOCKET(s_socket)) {
-                fprintf(stderr, "socket() failed. (%d)\n", GETSOCKETERRNO());
-                exit(EXIT_FAILURE);
-        }
-
-        if (bind(s_socket, (struct sockaddr *) &server, sizeof(server)) < 0) {
-                fprintf(stderr, "bind() failed. (%d)\n", GETSOCKETERRNO());
-                exit(EXIT_FAILURE);
-        }
-
-        if (listen(s_socket, BACKLOG) < 0) {
-                fprintf(stderr, "listen() failed. (%d)\n", GETSOCKETERRNO());
-                exit(EXIT_FAILURE);
-        }
-
-        printf("server running on port %d\n", ntohs(server.sin_port));
+        SOCKET s_socket = create_server(port);
 
         struct sockaddr_in client_details;
 
@@ -104,7 +79,7 @@ static void increase_total_connections()
         TOTAL_CONNECTIONS++;
 }
 
-static void decrement_total_connections()
+static void decrease_total_connections()
 {
         if (TOTAL_CONNECTIONS > 0) {
                 TOTAL_CONNECTIONS--;
@@ -329,22 +304,11 @@ static void send_public_message(struct client *client)
 
 static int extract_username_and_message(const char *message_rcvd, char *username, char *message)
 {
-        char username_buffer[BUFFER_SIZE];
-        char message_buffer[BUFFER_SIZE];
-
-        memset(username_buffer, 0, sizeof(username_buffer));
-        memset(message_buffer, 0, sizeof(message_buffer));
-
-        strncpy(username_buffer, message_rcvd,
-                (BUFFER_SIZE - strlen(message_rcvd) - 1));
-        strncpy(message_buffer, message_rcvd,
-                (BUFFER_SIZE - strlen(message_rcvd) - 1));
-
         const char *utoken = "-u ";
         const char *mtoken = "-m ";
 
-        char *usr = strstr(username_buffer, utoken);
-        char *msg = strstr(message_buffer, mtoken);
+        char *usr = strstr(message_rcvd, utoken);
+        char *msg = strstr(message_rcvd, mtoken);
 
         if (usr == NULL || msg == NULL) {
                 return -1;
@@ -366,9 +330,6 @@ static int extract_username_and_message(const char *message_rcvd, char *username
         for (int i = msg_start, j = 0; i < msg_end; i++, j++) {
                 message[j] = msg[i];
         }
-
-        memset(username_buffer, 0, sizeof(username_buffer));
-        memset(message_buffer, 0, sizeof(message_buffer));
 
         return 0;
 }
@@ -443,7 +404,7 @@ static void disconnect_client(struct client *client)
                         memset(CONNECTED_CLIENTS[i].message, 0,
                                sizeof(CONNECTED_CLIENTS[i].message));
 
-                        decrement_total_connections();
+                        decrease_total_connections();
 
                         break;
                 }

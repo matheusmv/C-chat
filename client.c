@@ -5,27 +5,9 @@ static void *client_send_thr(void *);
 static void *client_recv_thr(void *);
 static void send_message(const uint16_t, const char *);
 
-void conect_to_server(const char *address, const uint16_t port, const char *username)
+void start_client(const char *address, const uint16_t port, const char *username)
 {
-        struct sockaddr_in server;
-
-        memset(&server, 0, sizeof(server));
-
-        server.sin_addr.s_addr = inet_addr(address);
-        server.sin_family = AF_INET;
-        server.sin_port = htons(port);
-
-        SOCKET c_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-        if (!ISVALIDSOCKET(c_socket)) {
-                fprintf(stderr, "socket() failed. (%d)\n", GETSOCKETERRNO());
-                exit(EXIT_FAILURE);
-        }
-
-        if (connect(c_socket, (struct sockaddr *) &server, sizeof(server)) < 0) {
-                fprintf(stderr, "connect() failed. (%d)\n", GETSOCKETERRNO());
-                exit(EXIT_FAILURE);
-        }
+        SOCKET c_socket = connect_to_server(address, port);
 
         pthread_t sendthread, recvthread;
 

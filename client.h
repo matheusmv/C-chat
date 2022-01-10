@@ -8,6 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 
-void conect_to_server(const char *, const uint16_t, const char *);
+void start_client(const char *address, const uint16_t port, const char *username);
 
 #endif

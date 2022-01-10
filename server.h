@@ -9,7 +9,6 @@
 #include <string.h>
 #include <time.h>
 
-#define BACKLOG 5
 #define MAX_CONNECTIONS 5
 
 /* error messages */
@@ -32,6 +31,6 @@ struct client {
         pthread_t tid;
 };
 
-void start_server(const uint16_t);
+void start_server(const uint16_t port);
 
 #endif
