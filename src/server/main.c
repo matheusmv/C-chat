@@ -1,5 +1,5 @@
 #include "server.h"
-#include "utils.h"
+#include "../includes/utils.h"
 
 #include <unistd.h>
 #include <getopt.h>

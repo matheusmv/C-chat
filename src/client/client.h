@@ -1,7 +1,7 @@
 #ifndef _CLIENT_H
 #define _CLIENT_H
 
-#include "network.h"
+#include "../includes/network.h"
 
 #include <pthread.h>
 #include <stdlib.h>
