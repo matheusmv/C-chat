@@ -171,41 +171,26 @@ static void *server_thread_func(void *arg)
 static void list_online_clients(struct client *client)
 {
         if (TOTAL_CONNECTIONS > 1) {
-                char message[BUFFER_SIZE];
-                char port[6];
+                const size_t message_size = 3 * BUFFER_SIZE * MAX_CONNECTIONS;
 
+                char message[message_size];
+                char buffer[message_size];
                 memset(message, 0, sizeof(message));
-                memset(port, 0, sizeof(port));
+                memset(buffer, 0, sizeof(buffer));
 
                 for (int i = 0; i < MAX_CONNECTIONS; i++) {
                         if (CONNECTED_CLIENTS[i].socket > 0 &&
                             CONNECTED_CLIENTS[i].socket != client->socket) {
-
-                                strncat(message, "[",
-                                        (BUFFER_SIZE - strlen(message) - 1));
-                                strncat(message, CONNECTED_CLIENTS[i].address,
-                                        (BUFFER_SIZE - strlen(message) - 1));
-                                strncat(message, ":",
-                                        (BUFFER_SIZE - strlen(message) - 1));
-
-                                sprintf(port, "%d", CONNECTED_CLIENTS[i].port);
-                                strncat(message, port,
-                                        (BUFFER_SIZE - strlen(message) - 1));
-                                strncat(message, "] ",
-                                        (BUFFER_SIZE - strlen(message) - 1));
-                                strncat(message, CONNECTED_CLIENTS[i].username,
-                                        (BUFFER_SIZE - strlen(message) - 1));
-                                strncat(message, "\r\n",
-                                        (BUFFER_SIZE - strlen(message) - 1));
-
-                                memset(port, 0, sizeof(port));
+                                snprintf(buffer, message_size, "[%s:%d] %s\r\n",
+                                         CONNECTED_CLIENTS[i].address,
+                                         CONNECTED_CLIENTS[i].port,
+                                         CONNECTED_CLIENTS[i].username);
+                                strncat(message, buffer, message_size - 1);
                         }
                 }
 
                 send_message(client->socket, message);
 
-                memset(port, 0, sizeof(port));
-                memset(message, 0, sizeof(message));
                 memset(client->message, 0, sizeof(client->message));
 
                 return;
