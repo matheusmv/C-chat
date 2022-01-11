@@ -13,7 +13,7 @@ SERVERBIN=server
 
 all: release
 
-debug: CFLAGS += -ggdb
+debug: CFLAGS += -g
 debug: all
 
 release:
