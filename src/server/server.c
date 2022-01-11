@@ -323,16 +323,13 @@ static void send_private_message(struct client *client)
         }
 
         int status = -1;
+
         char message[BUFFER_SIZE];
         char dest_username[BUFFER_SIZE];
-
         memset(message, 0, sizeof(message));
         memset(dest_username, 0, sizeof(dest_username));
 
-        status = extract_username_and_message(client->message,
-                                              dest_username,
-                                              message);
-
+        status = extract_username_and_message(client->message, dest_username, message);
         if (status < 0) {
                 memset(client->message, 0, sizeof(client->message));
                 send_message(client->socket, INVALID_MESSAGE_FORMAT);
@@ -340,8 +337,7 @@ static void send_private_message(struct client *client)
         }
 
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
-                if (strncmp(CONNECTED_CLIENTS[i].username,
-                            dest_username,
+                if (strncmp(CONNECTED_CLIENTS[i].username, dest_username,
                             sizeof(CONNECTED_CLIENTS[i].username)) == 0) {
 
                         memset(client->message, 0, sizeof(client->message));
@@ -355,8 +351,6 @@ static void send_private_message(struct client *client)
                 }
         }
 
-        memset(message, 0, sizeof(message));
-        memset(dest_username, 0, sizeof(dest_username));
         memset(client->message, 0, sizeof(client->message));
 
         if (status < 1) {
