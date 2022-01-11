@@ -15,8 +15,8 @@ static void send_private_message(struct client *);
 static void disconnect_client(struct client *);
 static void send_message(const uint16_t, const char *);
 
+pthread_mutex_t MUTEX = PTHREAD_MUTEX_INITIALIZER;
 struct client CONNECTED_CLIENTS[MAX_CONNECTIONS];
-
 static int TOTAL_CONNECTIONS = 0;
 
 void start_server(const uint16_t port)
@@ -112,6 +112,7 @@ static int client_auth(struct client *client)
 
 static struct client *register_client(struct client *client)
 {
+        pthread_mutex_lock(&MUTEX);
         int client_index;
 
         for (client_index = 0; client_index < MAX_CONNECTIONS; client_index++) {
@@ -121,6 +122,7 @@ static struct client *register_client(struct client *client)
                         break;
                 }
         }
+        pthread_mutex_unlock(&MUTEX);
 
         return &CONNECTED_CLIENTS[client_index];
 }
@@ -379,6 +381,7 @@ static void send_private_message(struct client *client)
 
 static void disconnect_client(struct client *client)
 {
+        pthread_mutex_lock(&MUTEX);
         fprintf(stdout, "client disconnects - IP: %s PORT: %d\n", client->address, client->port);
 
         CLOSESOCKET(client->socket);
@@ -392,6 +395,7 @@ static void disconnect_client(struct client *client)
                         break;
                 }
         }
+        pthread_mutex_unlock(&MUTEX);
 }
 
 static void send_message(const uint16_t socketfd, const char *message)
