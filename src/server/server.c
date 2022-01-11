@@ -117,7 +117,7 @@ static struct client *register_client(struct client *client)
 
         for (client_index = 0; client_index < MAX_CONNECTIONS; client_index++) {
                 if (CONNECTED_CLIENTS[client_index].socket <= 0) {
-                        CONNECTED_CLIENTS[client_index] = *client;
+                        memmove(&CONNECTED_CLIENTS[client_index], client, sizeof(struct client));
                         increase_total_connections();
                         break;
                 }
@@ -147,7 +147,6 @@ static void *server_thread_func(void *arg)
                 if (strncmp(client->message, DISCONNECT, strlen(DISCONNECT)) == 0) {
                         send_message(client->socket, DISCONNECT);
                         disconnect_client(client);
-                        client = NULL;
                         return NULL;
                 }
 
@@ -163,7 +162,6 @@ static void *server_thread_func(void *arg)
         char *err = strerror(GETSOCKETERRNO());
         fprintf(stderr, "recv() failed. (%d)(%s)\n", GETSOCKETERRNO(), err);
         disconnect_client(client);
-        client = NULL;
 
         return NULL;
 }
@@ -196,6 +194,7 @@ static void list_online_clients(struct client *client)
                 return;
         }
 
+        memset(client->message, 0, sizeof(client->message));
         send_message(client->socket, NO_USERS_ONLINE_MESSAGE);
 }
 
@@ -235,40 +234,23 @@ static void build_message(const struct client *client, char *message, size_t mes
                 (BUFFER_SIZE - strlen(message) - 1));
         strncat(message, client->message,
                 (BUFFER_SIZE - strlen(message) - 1));
-
-        memset(port, 0, sizeof(port));
-        memset(sent_at, 0, sizeof(sent_at));
 }
 
 static void get_current_time(char *buffer, size_t buffer_size)
 {
         time_t rawtime;
         struct tm *info;
-        char hh[5], mm[5];
-
-        memset(&info, 0, sizeof(info));
-        memset(hh, 0, sizeof(hh));
-        memset(mm, 0, sizeof(mm));
 
         time(&rawtime);
         info = gmtime(&rawtime);
 
-        sprintf(hh, "%d", (info->tm_hour % 24));
-        sprintf(mm, "%d", info->tm_min);
-
-        strncat(buffer, hh,
-                (buffer_size - strlen(buffer) - 1));
-        strncat(buffer, ":",
-                (buffer_size - strlen(buffer) - 1));
-        strncat(buffer, mm,
-                (buffer_size - strlen(buffer) - 1));
-        strncat(buffer, " UTC",
-                (buffer_size - strlen(buffer) - 1));
+        strftime(buffer, buffer_size, "%H:%M UTC", info);
 }
 
 static void send_public_message(struct client *client)
 {
         char message[BUFFER_SIZE];
+        memset(message, 0, sizeof(message));
 
         build_message(client, message, sizeof(message));
 
@@ -279,7 +261,6 @@ static void send_public_message(struct client *client)
                 }
         }
 
-        memset(message, 0, sizeof(message));
         memset(client->message, 0, sizeof(client->message));
 }
 
@@ -290,7 +271,6 @@ static int extract_username_and_message(const char *message_rcvd, char *username
 
         char *usr = strstr(message_rcvd, utoken);
         char *msg = strstr(message_rcvd, mtoken);
-
         if (usr == NULL || msg == NULL) {
                 return -1;
         }
@@ -318,6 +298,7 @@ static int extract_username_and_message(const char *message_rcvd, char *username
 static void send_private_message(struct client *client)
 {
         if (TOTAL_CONNECTIONS < 2) {
+                memset(client->message, 0, sizeof(client->message));
                 send_message(client->socket, NO_USERS_ONLINE_MESSAGE);
                 return;
         }
