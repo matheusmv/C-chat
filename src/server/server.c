@@ -379,7 +379,7 @@ static void send_private_message(struct client *client)
 
 static void disconnect_client(struct client *client)
 {
-        printf("client disconnects - IP: %s PORT: %d\n", client->address, client->port);
+        fprintf(stdout, "client disconnects - IP: %s PORT: %d\n", client->address, client->port);
 
         CLOSESOCKET(client->socket);
 
