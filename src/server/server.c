@@ -394,9 +394,12 @@ static void disconnect_client(struct client *client)
         }
 }
 
-static void send_message(const uint16_t client_socket, const char *message)
+static void send_message(const uint16_t socketfd, const char *message)
 {
-        if (send(client_socket, message, strlen(message), 0) < 0) {
+        int status = 0;
+
+        status = send(socketfd, message, strlen(message), 0);
+        if (status < 0) {
                 char *err = strerror(GETSOCKETERRNO());
                 fprintf(stderr, "send() failed. (%d)(%s)\n", GETSOCKETERRNO(), err);
         }
