@@ -1,7 +1,6 @@
 #include "server.h"
 
-typedef struct client Client;
-
+static void handle_connections(SOCKET);
 static void increase_total_connections();
 static void decrease_total_connections();
 static int client_auth(struct client *);
@@ -16,7 +15,7 @@ static void send_private_message(struct client *);
 static void disconnect_client(struct client *);
 static void send_message(const uint16_t, const char *);
 
-Client CONNECTED_CLIENTS[MAX_CONNECTIONS];
+struct client CONNECTED_CLIENTS[MAX_CONNECTIONS];
 
 static int TOTAL_CONNECTIONS = 0;
 
@@ -24,51 +23,44 @@ void start_server(const uint16_t port)
 {
         SOCKET s_socket = create_server(port);
 
+        handle_connections(s_socket);
+}
+
+static void handle_connections(SOCKET s_socket)
+{
         struct sockaddr_in client_details;
+        socklen_t addrlen = sizeof(client_details);
+        struct client new_client;
 
-        int addrlen = sizeof(struct sockaddr_in);
-
-        Client *new_client = NULL;
-
-        while (1) {
-                if (new_client != NULL) {
-                        free(new_client);
-                        new_client = NULL;
-                }
-
+        for (;;) {
                 memset(&client_details, 0, sizeof(client_details));
 
-                int c_socket = accept(
-                        s_socket,
-                        (struct sockaddr *) &client_details,
-                        (socklen_t *) &addrlen);
-
+                SOCKET c_socket = accept(s_socket, (struct sockaddr *) &client_details, &addrlen);
                 if (!ISVALIDSOCKET(c_socket)) {
-                        fprintf(stderr, "accept() failed. (%d)\n", GETSOCKETERRNO());
+                        char *err = strerror(GETSOCKETERRNO());
+                        fprintf(stderr, "accept() failed. (%d)(%s)\n", GETSOCKETERRNO(), err);
                         continue;
                 }
 
-                new_client = malloc(sizeof(Client));
-
-                new_client->socket = c_socket;
-                new_client->address = inet_ntoa(client_details.sin_addr);
-                new_client->port = ntohs(client_details.sin_port);
+                memset(&new_client, 0, sizeof(new_client));
+                new_client.socket = c_socket;
+                new_client.address = inet_ntoa(client_details.sin_addr);
+                new_client.port = ntohs(client_details.sin_port);
 
                 if (TOTAL_CONNECTIONS == MAX_CONNECTIONS) {
-                        send_message(new_client->socket, MAX_LIMIT_MESSAGE);
-                        disconnect_client(new_client);
+                        send_message(new_client.socket, MAX_LIMIT_MESSAGE);
+                        disconnect_client(&new_client);
                         continue;
                 }
 
-                if (client_auth(new_client) > 0) {
+                if (client_auth(&new_client) > 0) {
                         pthread_attr_t attr;
                         pthread_attr_init(&attr);
-                        pthread_attr_setdetachstate(&attr,
-                                                    PTHREAD_CREATE_DETACHED);
-                        pthread_create(&new_client->tid,
+                        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+                        pthread_create(&new_client.tid,
                                        &attr,
                                        server_thread_func,
-                                       (void *) register_client(new_client));
+                                       (void *) register_client(&new_client));
                         pthread_attr_destroy(&attr);
                 }
         }
@@ -94,7 +86,8 @@ static int client_auth(struct client *client)
         memset(client->message, 0, sizeof(client->message));
 
         if (recv(client->socket, client->message, sizeof(client->message), 0) <= 0) {
-                fprintf(stderr, "recv() failed. (%d)\n", GETSOCKETERRNO());
+                char *err = strerror(GETSOCKETERRNO());
+                fprintf(stderr, "recv() failed. (%d)(%s)\n", GETSOCKETERRNO(), err);
                 return auth_status;
         }
 
@@ -134,7 +127,7 @@ static struct client *register_client(struct client *client)
 
 static void *server_thread_func(void *arg)
 {
-        Client *client = arg;
+        struct client *client = arg;
 
         printf("Client connected - IP: %s PORT: %d\n", client->address, client->port);
 
@@ -165,7 +158,8 @@ static void *server_thread_func(void *arg)
                 }
         }
 
-        fprintf(stderr, "recv() failed. (%d)\n", GETSOCKETERRNO());
+        char *err = strerror(GETSOCKETERRNO());
+        fprintf(stderr, "recv() failed. (%d)(%s)\n", GETSOCKETERRNO(), err);
         disconnect_client(client);
         client = NULL;
 
@@ -385,24 +379,13 @@ static void send_private_message(struct client *client)
 
 static void disconnect_client(struct client *client)
 {
-        printf("client disconnects - IP: %s PORT: %d\n",
-               client->address, client->port);
+        fprintf(stdout, "client disconnects - IP: %s PORT: %d\n", client->address, client->port);
 
         CLOSESOCKET(client->socket);
 
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
                 if (CONNECTED_CLIENTS[i].socket == client->socket) {
-                        memset(CONNECTED_CLIENTS[i].username, 0,
-                               sizeof(CONNECTED_CLIENTS[i].username));
-
-                        CONNECTED_CLIENTS[i].address = "";
-
-                        CONNECTED_CLIENTS[i].port = 0;
-
-                        CONNECTED_CLIENTS[i].socket = 0;
-
-                        memset(CONNECTED_CLIENTS[i].message, 0,
-                               sizeof(CONNECTED_CLIENTS[i].message));
+                        memset(&CONNECTED_CLIENTS[i], 0, sizeof(struct client));
 
                         decrease_total_connections();
 
@@ -411,9 +394,13 @@ static void disconnect_client(struct client *client)
         }
 }
 
-static void send_message(const uint16_t client_socket, const char *message)
+static void send_message(const uint16_t socketfd, const char *message)
 {
-        if (send(client_socket, message, strlen(message), 0) < 0) {
-                fprintf(stderr, "send() failed. (%d)\n", GETSOCKETERRNO());
+        int status = 0;
+
+        status = send(socketfd, message, strlen(message), 0);
+        if (status < 0) {
+                char *err = strerror(GETSOCKETERRNO());
+                fprintf(stderr, "send() failed. (%d)(%s)\n", GETSOCKETERRNO(), err);
         }
 }
