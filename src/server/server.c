@@ -379,24 +379,13 @@ static void send_private_message(struct client *client)
 
 static void disconnect_client(struct client *client)
 {
-        printf("client disconnects - IP: %s PORT: %d\n",
-               client->address, client->port);
+        printf("client disconnects - IP: %s PORT: %d\n", client->address, client->port);
 
         CLOSESOCKET(client->socket);
 
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
                 if (CONNECTED_CLIENTS[i].socket == client->socket) {
-                        memset(CONNECTED_CLIENTS[i].username, 0,
-                               sizeof(CONNECTED_CLIENTS[i].username));
-
-                        CONNECTED_CLIENTS[i].address = "";
-
-                        CONNECTED_CLIENTS[i].port = 0;
-
-                        CONNECTED_CLIENTS[i].socket = 0;
-
-                        memset(CONNECTED_CLIENTS[i].message, 0,
-                               sizeof(CONNECTED_CLIENTS[i].message));
+                        memset(&CONNECTED_CLIENTS[i], 0, sizeof(struct client));
 
                         decrease_total_connections();
 
