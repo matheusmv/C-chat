@@ -60,7 +60,7 @@ SOCKET create_server(const uint16_t port)
                 exit(EXIT_FAILURE);
         }
 
-        fprintf(stdout, "server running on port %d\n", ntohs(server_details.sin_port));
+        fprintf(stdout, "server running on port %d\n", port);
 
         return socketfd;
 }
