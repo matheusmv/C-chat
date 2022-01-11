@@ -36,9 +36,9 @@ static void handle_connections(SOCKET s_socket)
                 memset(&client_details, 0, sizeof(client_details));
 
                 SOCKET c_socket = accept(s_socket, (struct sockaddr *) &client_details, &addrlen);
-
                 if (!ISVALIDSOCKET(c_socket)) {
-                        fprintf(stderr, "accept() failed. (%d)\n", GETSOCKETERRNO());
+                        char *err = strerror(GETSOCKETERRNO());
+                        fprintf(stderr, "accept() failed. (%d)(%s)\n", GETSOCKETERRNO(), err);
                         continue;
                 }
 
@@ -86,7 +86,8 @@ static int client_auth(struct client *client)
         memset(client->message, 0, sizeof(client->message));
 
         if (recv(client->socket, client->message, sizeof(client->message), 0) <= 0) {
-                fprintf(stderr, "recv() failed. (%d)\n", GETSOCKETERRNO());
+                char *err = strerror(GETSOCKETERRNO());
+                fprintf(stderr, "recv() failed. (%d)(%s)\n", GETSOCKETERRNO(), err);
                 return auth_status;
         }
 
@@ -157,7 +158,8 @@ static void *server_thread_func(void *arg)
                 }
         }
 
-        fprintf(stderr, "recv() failed. (%d)\n", GETSOCKETERRNO());
+        char *err = strerror(GETSOCKETERRNO());
+        fprintf(stderr, "recv() failed. (%d)(%s)\n", GETSOCKETERRNO(), err);
         disconnect_client(client);
         client = NULL;
 
@@ -406,6 +408,7 @@ static void disconnect_client(struct client *client)
 static void send_message(const uint16_t client_socket, const char *message)
 {
         if (send(client_socket, message, strlen(message), 0) < 0) {
-                fprintf(stderr, "send() failed. (%d)\n", GETSOCKETERRNO());
+                char *err = strerror(GETSOCKETERRNO());
+                fprintf(stderr, "send() failed. (%d)(%s)\n", GETSOCKETERRNO(), err);
         }
 }
