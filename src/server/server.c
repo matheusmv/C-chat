@@ -200,7 +200,7 @@ static void list_online_clients(struct client *client)
 
 static void build_message(const struct client *client, char *message, size_t message_size)
 {
-        /* Msg of 'username' ['address':'port']:[hh:mm UTC] 'message' */
+        /* Msg of 'username' ['address':'port']:[hh:mm GMT] 'message' */
         char port[6];
         char sent_at[50];
 
@@ -238,13 +238,13 @@ static void build_message(const struct client *client, char *message, size_t mes
 
 static void get_current_time(char *buffer, size_t buffer_size)
 {
-        time_t rawtime;
-        struct tm *info;
+        time_t seconds;
+        struct tm time_info;
 
-        time(&rawtime);
-        info = gmtime(&rawtime);
+        seconds = time(NULL);
+        gmtime_r(&seconds, &time_info);
 
-        strftime(buffer, buffer_size, "%H:%M UTC", info);
+        strftime(buffer, buffer_size, "%H:%M %Z", &time_info);
 }
 
 static void send_public_message(struct client *client)
