@@ -1,4 +1,5 @@
 #include "server.h"
+#include <signal.h>
 
 static void handle_connections(SOCKET);
 static void increase_total_connections();
@@ -18,6 +19,7 @@ static void send_message(const uint16_t, const char *);
 pthread_mutex_t MUTEX = PTHREAD_MUTEX_INITIALIZER;
 struct client CONNECTED_CLIENTS[MAX_CONNECTIONS];
 static int TOTAL_CONNECTIONS = 0;
+static int RUN = 1;
 
 void start_server(const uint16_t port)
 {
@@ -26,13 +28,32 @@ void start_server(const uint16_t port)
         handle_connections(s_socket);
 }
 
+static void sigint_handler(int signum)
+{
+        if (TOTAL_CONNECTIONS > 0) {
+                fprintf(stdout, "there are still users connected to the server.\n");
+        } else {
+                RUN = 0;
+        }
+}
+
 static void handle_connections(SOCKET s_socket)
 {
         struct sockaddr_in client_details;
         socklen_t addrlen = sizeof(client_details);
         struct client new_client;
 
-        for (;;) {
+        struct sigaction action;
+        action.sa_flags = 0;
+        sigemptyset(&action.sa_mask);
+        action.sa_handler = sigint_handler;
+        sigaction(SIGINT, &action, NULL);
+
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+        while (RUN) {
                 memset(&client_details, 0, sizeof(client_details));
 
                 SOCKET c_socket = accept(s_socket, (struct sockaddr *) &client_details, &addrlen);
@@ -54,16 +75,15 @@ static void handle_connections(SOCKET s_socket)
                 }
 
                 if (client_auth(&new_client) > 0) {
-                        pthread_attr_t attr;
-                        pthread_attr_init(&attr);
-                        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-                        pthread_create(&new_client.tid,
-                                       &attr,
-                                       server_thread_func,
-                                       (void *) register_client(&new_client));
-                        pthread_attr_destroy(&attr);
+                        struct client *arg = register_client(&new_client);
+                        pthread_create(&new_client.tid, &attr, server_thread_func, (void *) arg);
                 }
         }
+
+        CLOSESOCKET(s_socket);
+        pthread_attr_destroy(&attr);
+        pthread_mutex_destroy(&MUTEX);
+        exit(EXIT_SUCCESS);
 }
 
 static void increase_total_connections()
