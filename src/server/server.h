@@ -22,15 +22,6 @@
 #define LIST_ONLINE_CLIENTS ":list:"
 #define SEND_PRIVATE_MESSAGE ":send:"
 
-struct client {
-        char username[BUFFER_SIZE];
-        char *address;
-        uint16_t port;
-        SOCKET socket;
-        char message[BUFFER_SIZE];
-        pthread_t tid;
-};
-
 void start_server(const uint16_t port);
 
 #endif

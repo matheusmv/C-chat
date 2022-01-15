@@ -1,7 +1,16 @@
 #include "server.h"
 #include <signal.h>
 
-static void handle_connections(SOCKET);
+struct client {
+        SOCKET socket;
+        char *address;
+        uint16_t port;
+        pthread_t tid;
+        char username[BUFFER_SIZE];
+        char message[BUFFER_SIZE];
+};
+
+static void handle_connections(SOCKET *);
 static void increase_total_connections();
 static void decrease_total_connections();
 static int client_auth(struct client *);
@@ -25,7 +34,7 @@ void start_server(const uint16_t port)
 {
         SOCKET s_socket = create_server(port);
 
-        handle_connections(s_socket);
+        handle_connections(&s_socket);
 }
 
 static void sigint_handler(int signum)
@@ -37,11 +46,12 @@ static void sigint_handler(int signum)
         }
 }
 
-static void handle_connections(SOCKET s_socket)
+static void handle_connections(SOCKET *s_socket)
 {
-        struct sockaddr_in client_details;
-        socklen_t addrlen = sizeof(client_details);
-        struct client new_client;
+        if (s_socket == NULL) {
+                LOG_ERROR("invalid parameters");
+                exit(EXIT_FAILURE);
+        }
 
         struct sigaction action;
         action.sa_flags = 0;
@@ -53,12 +63,13 @@ static void handle_connections(SOCKET s_socket)
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
-        while (RUN) {
-                memset(&client_details, 0, sizeof(client_details));
+        struct sockaddr_in client_details;
+        struct client new_client;
 
-                SOCKET c_socket = accept(s_socket, (struct sockaddr *) &client_details, &addrlen);
+        while (RUN) {
+                SOCKET c_socket = accept_new_client(s_socket, &client_details);
                 if (!ISVALIDSOCKET(c_socket)) {
-                        LOG_ERROR("accept() failed. %s", strerror(errno));
+                        LOG_ERROR("accept_new_client() failed. %s", strerror(errno));
                         continue;
                 }
 
@@ -79,7 +90,7 @@ static void handle_connections(SOCKET s_socket)
                 }
         }
 
-        CLOSESOCKET(s_socket);
+        CLOSESOCKET(*s_socket);
         pthread_attr_destroy(&attr);
         pthread_mutex_destroy(&MUTEX);
         exit(EXIT_SUCCESS);

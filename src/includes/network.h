@@ -25,5 +25,6 @@
 
 SOCKET connect_to_server(const char *address, const uint16_t port);
 SOCKET create_server(const uint16_t port);
+SOCKET accept_new_client(SOCKET *server_socket, struct sockaddr_in *client_details);
 
 #endif

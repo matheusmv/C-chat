@@ -59,3 +59,20 @@ SOCKET create_server(const uint16_t port)
 
         return socketfd;
 }
+
+SOCKET accept_new_client(SOCKET *server_socket, struct sockaddr_in *client_details)
+{
+        if (server_socket == NULL || client_details == NULL) {
+                LOG_ERROR("invalid parameters");
+                exit(EXIT_FAILURE);
+        }
+
+        memset(client_details, 0, sizeof(struct sockaddr_in));
+
+        SOCKET socketfd = 0;
+        socklen_t addrlen = sizeof(struct sockaddr_in);
+
+        socketfd = accept(*server_socket, (struct sockaddr *) client_details, &addrlen);
+
+        return socketfd;
+}
