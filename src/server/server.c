@@ -31,7 +31,7 @@ void start_server(const uint16_t port)
 static void sigint_handler(int signum)
 {
         if (TOTAL_CONNECTIONS > 0) {
-                fprintf(stdout, "there are still users connected to the server.\n");
+                LOG_WARNING("there are still users connected to the server.");
         } else {
                 RUN = 0;
         }
@@ -58,8 +58,7 @@ static void handle_connections(SOCKET s_socket)
 
                 SOCKET c_socket = accept(s_socket, (struct sockaddr *) &client_details, &addrlen);
                 if (!ISVALIDSOCKET(c_socket)) {
-                        char *err = strerror(GETSOCKETERRNO());
-                        fprintf(stderr, "accept() failed. (%d)(%s)\n", GETSOCKETERRNO(), err);
+                        LOG_ERROR("accept() failed. %s", strerror(errno));
                         continue;
                 }
 
@@ -106,8 +105,7 @@ static int client_auth(struct client *client)
         memset(client->message, 0, sizeof(client->message));
 
         if (recv(client->socket, client->message, sizeof(client->message), 0) <= 0) {
-                char *err = strerror(GETSOCKETERRNO());
-                fprintf(stderr, "recv() failed. (%d)(%s)\n", GETSOCKETERRNO(), err);
+                LOG_ERROR("recv() failed. %s", strerror(errno));
                 return auth_status;
         }
 
@@ -151,9 +149,15 @@ static void *server_thread_func(void *arg)
 {
         struct client *client = arg;
 
-        printf("Client connected - IP: %s PORT: %d\n", client->address, client->port);
+        LOG_INFO("Client connected - IP: %s PORT: %d", client->address, client->port);
 
-        while (recv(client->socket, client->message, sizeof(client->message), 0) > 0) {
+        int status = 0;
+        while ((status = recv(client->socket, client->message, sizeof(client->message), 0))) {
+                if (status < 0) {
+                        LOG_ERROR("recv() failed. %s", strerror(errno));
+                        break;
+                }
+
                 if (strncmp(client->message, SEND_PRIVATE_MESSAGE, strlen(SEND_PRIVATE_MESSAGE)) == 0) {
                         send_private_message(client);
                         continue;
@@ -179,8 +183,6 @@ static void *server_thread_func(void *arg)
                 }
         }
 
-        char *err = strerror(GETSOCKETERRNO());
-        fprintf(stderr, "recv() failed. (%d)(%s)\n", GETSOCKETERRNO(), err);
         disconnect_client(client);
 
         return NULL;
@@ -362,7 +364,7 @@ static void send_private_message(struct client *client)
 static void disconnect_client(struct client *client)
 {
         pthread_mutex_lock(&MUTEX);
-        fprintf(stdout, "client disconnects - IP: %s PORT: %d\n", client->address, client->port);
+        LOG_INFO("Client disconnects - IP: %s PORT: %d", client->address, client->port);
 
         CLOSESOCKET(client->socket);
 
@@ -384,7 +386,6 @@ static void send_message(const uint16_t socketfd, const char *message)
 
         status = send(socketfd, message, strlen(message), 0);
         if (status < 0) {
-                char *err = strerror(GETSOCKETERRNO());
-                fprintf(stderr, "send() failed. (%d)(%s)\n", GETSOCKETERRNO(), err);
+                LOG_ERROR("send() failed. %s", strerror(errno));
         }
 }

@@ -3,7 +3,7 @@
 SOCKET connect_to_server(const char *address, const uint16_t port)
 {
         SOCKET socketfd = 0;
-        SOCKET status = 0;
+        int status = 0;
 
         struct sockaddr_in server_details;
         memset(&server_details, 0, sizeof(server_details));
@@ -13,15 +13,13 @@ SOCKET connect_to_server(const char *address, const uint16_t port)
 
         socketfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (!ISVALIDSOCKET(socketfd)) {
-                char *err = strerror(GETSOCKETERRNO());
-                fprintf(stderr, "socket() failed. (%d):(%s)\n", GETSOCKETERRNO(), err);
+                LOG_ERROR("socket() failed. %s", strerror(errno));
                 exit(EXIT_FAILURE);
         }
 
         status = connect(socketfd, (struct sockaddr *) &server_details, sizeof(server_details));
         if (status < 0) {
-                char *err = strerror(GETSOCKETERRNO());
-                fprintf(stderr, "connect() failed. (%d):(%s)\n", GETSOCKETERRNO(), err);
+                LOG_ERROR("connect() failed. %s", strerror(errno));
                 exit(EXIT_FAILURE);
         }
 
@@ -31,7 +29,7 @@ SOCKET connect_to_server(const char *address, const uint16_t port)
 SOCKET create_server(const uint16_t port)
 {
         SOCKET socketfd = 0;
-        SOCKET status = 0;
+        int status = 0;
 
         struct sockaddr_in server_details;
         memset(&server_details, 0, sizeof(server_details));
@@ -41,26 +39,23 @@ SOCKET create_server(const uint16_t port)
 
         socketfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (!ISVALIDSOCKET(socketfd)) {
-                char *err = strerror(GETSOCKETERRNO());
-                fprintf(stderr, "socket() failed. (%d):(%s)\n", GETSOCKETERRNO(), err);
+                LOG_ERROR("socket() failed. %s", strerror(errno));
                 exit(EXIT_FAILURE);
         }
 
         status = bind(socketfd, (struct sockaddr *) &server_details, sizeof(server_details));
         if (status < 0) {
-                char *err = strerror(GETSOCKETERRNO());
-                fprintf(stderr, "bind() failed. (%d):(%s)\n", GETSOCKETERRNO(), err);
+                LOG_ERROR("bind() failed. %s", strerror(errno));
                 exit(EXIT_FAILURE);
         }
 
         status = listen(socketfd, 0);
         if (status < 0) {
-                char *err = strerror(GETSOCKETERRNO());
-                fprintf(stderr, "listen() failed. (%d):(%s)\n", GETSOCKETERRNO(), err);
+                LOG_ERROR("listen() failed. %s", strerror(errno));
                 exit(EXIT_FAILURE);
         }
 
-        fprintf(stdout, "server running on port %d\n", port);
+        LOG_INFO("server running on port %d", port);
 
         return socketfd;
 }

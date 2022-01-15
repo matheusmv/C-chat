@@ -81,7 +81,7 @@ static void *client_recv_thr(void *arg)
                 memset(server_response, 0, sizeof(server_response));
 
                 if (recv(*client_socket, server_response, sizeof(server_response), 0) <= 0) {
-                        fprintf(stderr, "recv() failed. (%d)\n", GETSOCKETERRNO());
+                        LOG_ERROR("recv() failed. %s", strerror(errno));
                         return NULL;
                 }
 
@@ -101,7 +101,7 @@ static void *client_recv_thr(void *arg)
 static void send_message(const uint16_t client_socket, const char *message)
 {
         if (send(client_socket, message, strlen(message), 0) < 0) {
-                fprintf(stderr, "send() failed. (%d)\n", GETSOCKETERRNO());
+                LOG_ERROR("send() failed. %s", strerror(errno));
                 exit(EXIT_FAILURE);
         }
 }
