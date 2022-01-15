@@ -1,5 +1,7 @@
 # C-chat
 
+chat utilizando sockets na linguagem de programação C.
+
     Projeto desenvolvido durante a disciplina de sistemas distribuidos.
 
 ## Compilando
