@@ -2,6 +2,7 @@
 #include <unistd.h>
 
 #include "server.h"
+#include "../includes/clog.h"
 #include "../includes/utils.h"
 
 int main(int argc, char *argv[])

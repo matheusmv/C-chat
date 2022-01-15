@@ -1,13 +1,15 @@
 #ifndef _SERVER_H
 #define _SERVER_H
 
-#include "../includes/network.h"
-
 #include <pthread.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+
+#include "../includes/buffer.h"
+#include "../includes/network.h"
 
 #define MAX_CONNECTIONS 5
 

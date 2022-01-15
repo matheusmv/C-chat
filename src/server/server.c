@@ -1,43 +1,45 @@
 #include "server.h"
-#include <signal.h>
+#include "../includes/clog.h"
 
-struct client {
+typedef struct client {
         SOCKET socket;
         char *address;
         uint16_t port;
         pthread_t tid;
         char username[BUFFER_SIZE];
         char message[BUFFER_SIZE];
-};
+} client;
 
 static void handle_connections(SOCKET *);
 static void increase_total_connections();
 static void decrease_total_connections();
-static int client_auth(struct client *);
-static struct client *register_client(struct client *);
+static int client_auth(client *);
+static client *register_client(client *);
 static void *server_thread_func(void *);
-static void list_online_clients(struct client *);
-static void build_message(const struct client *, char *, size_t);
+static void list_online_clients(client *);
+static void build_message(const client *, char *, size_t);
 static void get_current_time(char *, size_t);
-static void send_public_message(struct client *);
+static void send_public_message(client *);
 static int extract_username_and_message(const char *, char *, char *);
-static void send_private_message(struct client *);
-static void disconnect_client(struct client *);
+static void send_private_message(client *);
+static void disconnect_client(client *);
 static void send_message(const uint16_t, const char *);
 
 pthread_mutex_t MUTEX = PTHREAD_MUTEX_INITIALIZER;
-struct client CONNECTED_CLIENTS[MAX_CONNECTIONS];
+client CONNECTED_CLIENTS[MAX_CONNECTIONS];
 static int TOTAL_CONNECTIONS = 0;
 static int RUN = 1;
 
-void start_server(const uint16_t port)
+void
+start_server(const uint16_t port)
 {
         SOCKET s_socket = create_server(port);
 
         handle_connections(&s_socket);
 }
 
-static void sigint_handler(int signum)
+static void
+sigint_handler(int signum)
 {
         if (TOTAL_CONNECTIONS > 0) {
                 LOG_WARNING("there are still users connected to the server.");
@@ -46,7 +48,8 @@ static void sigint_handler(int signum)
         }
 }
 
-static void handle_connections(SOCKET *s_socket)
+static void
+handle_connections(SOCKET *s_socket)
 {
         if (s_socket == NULL) {
                 LOG_ERROR("invalid parameters");
@@ -64,7 +67,7 @@ static void handle_connections(SOCKET *s_socket)
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
         struct sockaddr_in client_details;
-        struct client new_client;
+        client new_client;
 
         while (RUN) {
                 SOCKET c_socket = accept_new_client(s_socket, &client_details);
@@ -85,7 +88,7 @@ static void handle_connections(SOCKET *s_socket)
                 }
 
                 if (client_auth(&new_client) > 0) {
-                        struct client *arg = register_client(&new_client);
+                        client *arg = register_client(&new_client);
                         pthread_create(&new_client.tid, &attr, server_thread_func, (void *) arg);
                 }
         }
@@ -96,19 +99,22 @@ static void handle_connections(SOCKET *s_socket)
         exit(EXIT_SUCCESS);
 }
 
-static void increase_total_connections()
+static void
+increase_total_connections()
 {
         TOTAL_CONNECTIONS++;
 }
 
-static void decrease_total_connections()
+static void
+decrease_total_connections()
 {
         if (TOTAL_CONNECTIONS > 0) {
                 TOTAL_CONNECTIONS--;
         }
 }
 
-static int client_auth(struct client *client)
+static int
+client_auth(client *client)
 {
         int auth_status = -1;
 
@@ -139,7 +145,8 @@ static int client_auth(struct client *client)
         return auth_status;
 }
 
-static struct client *register_client(struct client *client)
+static client *
+register_client(client *client)
 {
         pthread_mutex_lock(&MUTEX);
         int client_index;
@@ -156,9 +163,10 @@ static struct client *register_client(struct client *client)
         return &CONNECTED_CLIENTS[client_index];
 }
 
-static void *server_thread_func(void *arg)
+static void *
+server_thread_func(void *arg)
 {
-        struct client *client = arg;
+        client *client = arg;
 
         LOG_INFO("Client connected - IP: %s PORT: %d", client->address, client->port);
 
@@ -187,8 +195,7 @@ static void *server_thread_func(void *arg)
 
                 if (!strncmp(client->message, "\n", strlen("\n")) == 0) {
                         printf("[%s:%d] %s >>> %s",
-                               client->address, client->port,
-                               client->username, client->message);
+                               client->address, client->port, client->username, client->message);
 
                         send_public_message(client);
                 }
@@ -199,28 +206,28 @@ static void *server_thread_func(void *arg)
         return NULL;
 }
 
-static void list_online_clients(struct client *client)
+static void
+list_online_clients(client *client)
 {
         if (TOTAL_CONNECTIONS > 1) {
-                const size_t message_size = 3 * BUFFER_SIZE * MAX_CONNECTIONS;
-
-                char message[message_size];
-                char buffer[message_size];
-                memset(message, 0, sizeof(message));
-                memset(buffer, 0, sizeof(buffer));
+                buffer *buff = new_buffer(BUFFER_SIZE);
 
                 for (int i = 0; i < MAX_CONNECTIONS; i++) {
-                        if (CONNECTED_CLIENTS[i].socket > 0 &&
-                            CONNECTED_CLIENTS[i].socket != client->socket) {
-                                snprintf(buffer, message_size, "[%s:%d] %s\r\n",
-                                         CONNECTED_CLIENTS[i].address,
-                                         CONNECTED_CLIENTS[i].port,
-                                         CONNECTED_CLIENTS[i].username);
-                                strncat(message, buffer, message_size - 1);
+                        SOCKET socketfd = CONNECTED_CLIENTS[i].socket;
+
+                        if (socketfd > 0 && socketfd != client->socket) {
+                                buffer_appendf(buff, "[%s:%d] %s\r\n",
+                                               CONNECTED_CLIENTS[i].address,
+                                               CONNECTED_CLIENTS[i].port,
+                                               CONNECTED_CLIENTS[i].username);
                         }
                 }
 
+                char *message = buffer_to_string(buff);
                 send_message(client->socket, message);
+                free(message);
+
+                buffer_free(buff);
 
                 memset(client->message, 0, sizeof(client->message));
 
@@ -231,45 +238,35 @@ static void list_online_clients(struct client *client)
         send_message(client->socket, NO_USERS_ONLINE_MESSAGE);
 }
 
-static void build_message(const struct client *client, char *message, size_t message_size)
+static void
+build_message(const client *client, char *message, size_t message_size)
 {
         /* Msg of 'username' ['address':'port']:[hh:mm GMT] 'message' */
-        char port[6];
+        buffer *buff = new_buffer(BUFFER_SIZE);
+
         char sent_at[50];
-
-        memset(port, 0, sizeof(port));
         memset(sent_at, 0, sizeof(sent_at));
-        memset(message, 0, message_size);
-
-        strncat(message, "Msg of ",
-                (BUFFER_SIZE - strlen(message) - 1));
-        strncat(message, client->username,
-                (BUFFER_SIZE - strlen(message) - 1));
-        strncat(message, " [",
-                (BUFFER_SIZE - strlen(message) - 1));
-        strncat(message, client->address,
-                (BUFFER_SIZE - strlen(message) - 1));
-        strncat(message, ":",
-                (BUFFER_SIZE - strlen(message) - 1));
-
-        sprintf(port, "%d", client->port);
-        strncat(message, port,
-                (BUFFER_SIZE - strlen(message) - 1));
-        strncat(message, "]:",
-                (BUFFER_SIZE - strlen(message) - 1));
-        strncat(message, "[",
-                (BUFFER_SIZE - strlen(message) - 1));
-
         get_current_time(sent_at, sizeof(sent_at));
-        strncat(message, sent_at,
-                (BUFFER_SIZE - strlen(message) - 1));
-        strncat(message, "] ",
-                (BUFFER_SIZE - strlen(message) - 1));
-        strncat(message, client->message,
-                (BUFFER_SIZE - strlen(message) - 1));
+
+        const char *format = "Msf of %s [%s:%d]:[%s] %s";
+        buffer_appendf(buff, format,
+                       client->username,
+                       client->address,
+                       client->port,
+                       sent_at,
+                       client->message);
+
+        char *result = buffer_to_string(buff);
+
+        memset(message, 0, message_size);
+        memmove(message, result, strlen(result));
+
+        buffer_free(buff);
+        free(result);
 }
 
-static void get_current_time(char *buffer, size_t buffer_size)
+static void
+get_current_time(char *buffer, size_t buffer_size)
 {
         time_t seconds;
         struct tm time_info;
@@ -280,16 +277,17 @@ static void get_current_time(char *buffer, size_t buffer_size)
         strftime(buffer, buffer_size, "%H:%M %Z", &time_info);
 }
 
-static void send_public_message(struct client *client)
+static void
+send_public_message(client *client)
 {
         char message[BUFFER_SIZE];
-        memset(message, 0, sizeof(message));
 
-        build_message(client, message, sizeof(message));
+        build_message(client, message, BUFFER_SIZE);
 
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
-                if (CONNECTED_CLIENTS[i].socket > 0 &&
-                    CONNECTED_CLIENTS[i].socket != client->socket) {
+                SOCKET socketfd = CONNECTED_CLIENTS[i].socket;
+
+                if (socketfd > 0 && socketfd != client->socket) {
                         send_message(CONNECTED_CLIENTS[i].socket, message);
                 }
         }
@@ -297,7 +295,8 @@ static void send_public_message(struct client *client)
         memset(client->message, 0, sizeof(client->message));
 }
 
-static int extract_username_and_message(const char *message_rcvd, char *username, char *message)
+static int
+extract_username_and_message(const char *message_rcvd, char *username, char *message)
 {
         const char *utoken = "-u ";
         const char *mtoken = "-m ";
@@ -328,7 +327,8 @@ static int extract_username_and_message(const char *message_rcvd, char *username
         return 0;
 }
 
-static void send_private_message(struct client *client)
+static void
+send_private_message(client *client)
 {
         if (TOTAL_CONNECTIONS < 2) {
                 memset(client->message, 0, sizeof(client->message));
@@ -336,13 +336,12 @@ static void send_private_message(struct client *client)
                 return;
         }
 
-        int status = -1;
-
-        char message[BUFFER_SIZE];
         char dest_username[BUFFER_SIZE];
-        memset(message, 0, sizeof(message));
-        memset(dest_username, 0, sizeof(dest_username));
+        memset(dest_username, 0, BUFFER_SIZE);
+        char message[BUFFER_SIZE];
+        memset(message, 0, BUFFER_SIZE);
 
+        int status = 0;
         status = extract_username_and_message(client->message, dest_username, message);
         if (status < 0) {
                 memset(client->message, 0, sizeof(client->message));
@@ -351,8 +350,9 @@ static void send_private_message(struct client *client)
         }
 
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
-                if (strncmp(CONNECTED_CLIENTS[i].username, dest_username,
-                            sizeof(CONNECTED_CLIENTS[i].username)) == 0) {
+                char *usrname = CONNECTED_CLIENTS[i].username;
+
+                if (strncmp(usrname, dest_username, BUFFER_SIZE) == 0) {
 
                         memset(client->message, 0, sizeof(client->message));
                         strncpy(client->message, message, sizeof(client->message));
@@ -360,7 +360,6 @@ static void send_private_message(struct client *client)
                         send_message(CONNECTED_CLIENTS[i].socket, message);
 
                         status = 1;
-
                         break;
                 }
         }
@@ -372,7 +371,8 @@ static void send_private_message(struct client *client)
         }
 }
 
-static void disconnect_client(struct client *client)
+static void
+disconnect_client(client *client)
 {
         pthread_mutex_lock(&MUTEX);
         LOG_INFO("Client disconnects - IP: %s PORT: %d", client->address, client->port);
@@ -380,18 +380,19 @@ static void disconnect_client(struct client *client)
         CLOSESOCKET(client->socket);
 
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
-                if (CONNECTED_CLIENTS[i].socket == client->socket) {
+                SOCKET socketfd = CONNECTED_CLIENTS[i].socket;
+
+                if (socketfd == client->socket) {
                         memset(&CONNECTED_CLIENTS[i], 0, sizeof(struct client));
-
                         decrease_total_connections();
-
                         break;
                 }
         }
         pthread_mutex_unlock(&MUTEX);
 }
 
-static void send_message(const uint16_t socketfd, const char *message)
+static void
+send_message(const uint16_t socketfd, const char *message)
 {
         int status = 0;
 

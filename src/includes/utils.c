@@ -1,6 +1,7 @@
 #include "utils.h"
 
-int validate_number(const char *number)
+int
+validate_number(const char *number)
 {
         while (*number) {
                 if (!isdigit(*number)) {
@@ -13,7 +14,8 @@ int validate_number(const char *number)
         return 1;
 }
 
-int validate_ipv4(const char *ip)
+int
+validate_ipv4(const char *ip)
 {
         if (ip == NULL)
                 return 0;
@@ -53,7 +55,8 @@ int validate_ipv4(const char *ip)
         return 1;
 }
 
-int validate_port(const char *port)
+int
+validate_port(const char *port)
 {
         if (port == NULL)
                 return 0;
@@ -74,7 +77,8 @@ int validate_port(const char *port)
         return 1;
 }
 
-int validate_username(const char *username)
+int
+validate_username(const char *username)
 {
         if (username == NULL)
                 return 0;

@@ -1,6 +1,8 @@
 #include "network.h"
+#include "clog.h"
 
-SOCKET connect_to_server(const char *address, const uint16_t port)
+SOCKET
+connect_to_server(const char *address, const uint16_t port)
 {
         SOCKET socketfd = 0;
         int status = 0;
@@ -26,7 +28,8 @@ SOCKET connect_to_server(const char *address, const uint16_t port)
         return socketfd;
 }
 
-SOCKET create_server(const uint16_t port)
+SOCKET
+create_server(const uint16_t port)
 {
         SOCKET socketfd = 0;
         int status = 0;
@@ -60,7 +63,8 @@ SOCKET create_server(const uint16_t port)
         return socketfd;
 }
 
-SOCKET accept_new_client(SOCKET *server_socket, struct sockaddr_in *client_details)
+SOCKET
+accept_new_client(SOCKET *server_socket, struct sockaddr_in *client_details)
 {
         if (server_socket == NULL || client_details == NULL) {
                 LOG_ERROR("invalid parameters");

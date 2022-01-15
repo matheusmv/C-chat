@@ -1,11 +1,13 @@
 #include "client.h"
+#include "../includes/clog.h"
 
 static int server_auth(const int, const char *);
 static void *client_send_thr(void *);
 static void *client_recv_thr(void *);
 static void send_message(const uint16_t, const char *);
 
-void start_client(const char *address, const uint16_t port, const char *username)
+void
+start_client(const char *address, const uint16_t port, const char *username)
 {
         SOCKET c_socket = connect_to_server(address, port);
 
@@ -20,7 +22,8 @@ void start_client(const char *address, const uint16_t port, const char *username
         }
 }
 
-static int server_auth(const int client_socket, const char *username)
+static int
+server_auth(const int client_socket, const char *username)
 {
         int auth_status = -1;
 
@@ -43,7 +46,8 @@ static int server_auth(const int client_socket, const char *username)
         return auth_status;
 }
 
-static void *client_send_thr(void *arg)
+static void *
+client_send_thr(void *arg)
 {
         SOCKET *client_socket = arg;
 
@@ -71,7 +75,8 @@ static void *client_send_thr(void *arg)
         return NULL;
 }
 
-static void *client_recv_thr(void *arg)
+static void *
+client_recv_thr(void *arg)
 {
         SOCKET *client_socket = arg;
 
@@ -98,10 +103,10 @@ static void *client_recv_thr(void *arg)
         return NULL;
 }
 
-static void send_message(const uint16_t client_socket, const char *message)
+static void
+send_message(const uint16_t client_socket, const char *message)
 {
         if (send(client_socket, message, strlen(message), 0) < 0) {
                 LOG_ERROR("send() failed. %s", strerror(errno));
-                exit(EXIT_FAILURE);
         }
 }

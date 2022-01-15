@@ -2,6 +2,7 @@
 #include <unistd.h>
 
 #include "client.h"
+#include "../includes/clog.h"
 #include "../includes/utils.h"
 
 int main(int argc, char *argv[])
