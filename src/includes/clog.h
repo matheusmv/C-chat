@@ -2,6 +2,7 @@
 #define _CLOG_H
 
 #include <stdio.h>
+#include <time.h>
 
 #define ULINE "\x1b[4m"
 
@@ -12,44 +13,90 @@
 #define CWHT "\x1b[97m"
 #define CEND "\033[0m"
 
+/* DATE & TIME - Weekday Month Year hh:mm:ss */
+static inline void
+get_time(char *src, size_t size)
+{
+        time_t t;
+        struct tm time_info;
+
+        tzset();
+        t = time(NULL);
+        localtime_r(&t, &time_info);
+
+        strftime(src, size, "%b %d %Y %X", &time_info);
+}
+
 /* INFO */
 
 #define LOG_INFO(MSG, ...) \
-        fprintf(stdout, "%s %s %sINFO%2s%s %s%s:'%s':%d%s - %s" MSG "%s\n",\
-                __DATE__, __TIME__, CGRN, "", CEND, ULINE, __FILE__, __func__, __LINE__, CEND, CWHT, ##__VA_ARGS__, CEND)
+{\
+        char dt[32];\
+        get_time(dt, sizeof(dt));\
+        fprintf(stdout, "%s %sINFO%2s%s %s%s:'%s':%d%s - %s" MSG "%s\n", \
+                dt, CGRN, "", CEND, ULINE, __FILE__, __func__, __LINE__, CEND, CWHT, ##__VA_ARGS__, CEND);\
+}
 
 #define FLOG_INFO(STREAM, MSG, ...) \
-        fprintf(STREAM, "%s %s INFO%2s %s:'%s':%d - " MSG "\n",\
-                __DATE__, __TIME__, "", __FILE__, __func__, __LINE__, ##__VA_ARGS__)
+{\
+        char dt[32];\
+        get_time(dt, sizeof(dt));\
+        fprintf(STREAM, "%s INFO%2s %s:'%s':%d - " MSG "\n", \
+                dt, "", __FILE__, __func__, __LINE__, ##__VA_ARGS__);\
+}
 
 /* DEBUG */
 
 #define LOG_DEBUG(MSG, ...) \
-        fprintf(stdout, "%s %s %sDEBUG%1s%s %s%s:'%s':%d%s - %s" MSG "%s\n",\
-                __DATE__, __TIME__, CBLU, "", CEND, ULINE, __FILE__, __func__, __LINE__, CEND, CWHT, ##__VA_ARGS__, CEND)
+{\
+        char dt[32];\
+        get_time(dt, sizeof(dt));\
+        fprintf(stdout, "%s %sDEBUG%1s%s %s%s:'%s':%d%s - %s" MSG "%s\n", \
+                dt, CBLU, "", CEND, ULINE, __FILE__, __func__, __LINE__, CEND, CWHT, ##__VA_ARGS__, CEND);\
+}
 
 #define FLOG_DEBUG(STREAM, MSG, ...) \
-        fprintf(STREAM, "%s %s DEBUG%1s %s:'%s':%d - " MSG "\n",\
-                __DATE__, __TIME__, "", __FILE__, __func__, __LINE__, ##__VA_ARGS__)
+{\
+       char dt[32];\
+       get_time(dt, sizeof(dt));\
+       fprintf(STREAM, "%s DEBUG%1s %s:'%s':%d - " MSG "\n", \
+               dt, "", __FILE__, __func__, __LINE__, ##__VA_ARGS__);\
+}
 
 /* WARNING */
 
 #define LOG_WARNING(MSG, ...) \
-        fprintf(stdout, "%s %s %sWARN%2s%s %s%s:'%s':%d%s - %s" MSG "%s\n",\
-                __DATE__, __TIME__, CYEL, "", CEND, ULINE, __FILE__, __func__, __LINE__, CEND, CWHT, ##__VA_ARGS__, CEND)
+{\
+        char dt[32];\
+        get_time(dt, sizeof(dt));\
+        fprintf(stdout, "%s %sWARN%2s%s %s%s:'%s':%d%s - %s" MSG "%s\n", \
+                dt, CYEL, "", CEND, ULINE, __FILE__, __func__, __LINE__, CEND, CWHT, ##__VA_ARGS__, CEND);\
+}
 
 #define FLOG_WARNING(STREAM, MSG, ...) \
-        fprintf(STREAM, "%s %s WARN%2s %s:'%s':%d - " MSG "\n",\
-                __DATE__, __TIME__, "", __FILE__, __func__, __LINE__, ##__VA_ARGS__)
+{\
+        char dt[32];\
+        get_time(dt, sizeof(dt));\
+        fprintf(STREAM, "%s WARN%2s %s:'%s':%d - " MSG "\n", \
+                dt, "", __FILE__, __func__, __LINE__, ##__VA_ARGS__);\
+}
 
 /* ERROR */
 
 #define LOG_ERROR(MSG, ...) \
-        fprintf(stderr, "%s %s %sERROR%1s%s %s%s:'%s':%d%s - %s" MSG "%s\n",\
-                __DATE__, __TIME__, CRED, "", CEND, ULINE, __FILE__, __func__, __LINE__, CEND, CWHT, ##__VA_ARGS__, CEND)
+{\
+        char dt[32];\
+        get_time(dt, sizeof(dt));\
+        fprintf(stderr, "%s %sERROR%1s%s %s%s:'%s':%d%s - %s" MSG "%s\n", \
+                dt, CRED, "", CEND, ULINE, __FILE__, __func__, __LINE__, CEND, CWHT, ##__VA_ARGS__, CEND);\
+}
 
 #define FLOG_ERROR(STREAM, MSG, ...) \
-        fprintf(STREAM, "%s %s ERROR%1s %s:'%s':%d - " MSG "\n",\
-                __DATE__, __TIME__, "", __FILE__, __func__, __LINE__, ##__VA_ARGS__)
+{\
+        char dt[32];\
+        get_time(dt, sizeof(dt));\
+        fprintf(STREAM, "%s ERROR%1s %s:'%s':%d - " MSG "\n", \
+                dt, "", __FILE__, __func__, __LINE__, ##__VA_ARGS__);\
+}
 
 #endif
