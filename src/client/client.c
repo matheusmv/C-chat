@@ -58,10 +58,11 @@ client_send_thr(void *arg)
                 memset(client_input, 0, sizeof(client_input));
                 memset(final_message, 0, sizeof(final_message));
 
-                fgets(client_input, sizeof(client_input), stdin);
+                if (fgets(client_input, sizeof(client_input), stdin) == NULL)
+                        continue;
 
                 strncat(final_message, client_input,
-                        (BUFFER_SIZE - strlen(final_message) - 1));
+                        (sizeof(final_message) - strlen(client_input) - 1));
 
                 if (strncmp(final_message, DISCONNECT, strlen(DISCONNECT)) == 0) {
                         send_message(*client_socket, DISCONNECT);
