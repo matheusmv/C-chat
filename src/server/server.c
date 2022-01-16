@@ -210,7 +210,7 @@ static void
 list_online_clients(client *client)
 {
         if (TOTAL_CONNECTIONS > 1) {
-                buffer *buff = new_buffer(BUFFER_SIZE);
+                buffer *buff = new_buffer(4 * BUFFER_SIZE);
 
                 for (int i = 0; i < MAX_CONNECTIONS; i++) {
                         SOCKET socketfd = CONNECTED_CLIENTS[i].socket;
@@ -242,7 +242,7 @@ static void
 build_message(const client *client, char *message, size_t message_size)
 {
         /* Msg of 'username' ['address':'port']:[hh:mm GMT] 'message' */
-        buffer *buff = new_buffer(BUFFER_SIZE);
+        buffer *buff = new_buffer(4 * BUFFER_SIZE);
 
         char sent_at[50];
         memset(sent_at, 0, sizeof(sent_at));
