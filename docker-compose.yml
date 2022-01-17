@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  server:
+    build: 
+      dockerfile: ./docker/server.dockerfile
+      context: .
+    image: matheusmv/c-chat-server:1.0
+    container_name: c-chat-server
+    ports:
+      - "8888:8888"
+    restart: always

@@ -33,7 +33,7 @@ get_time(char *src, size_t size)
 {\
         char dt[32];\
         get_time(dt, sizeof(dt));\
-        fprintf(stdout, "%s %sINFO%2s%s %s%s:'%s':%d%s - %s" MSG "%s\n", \
+        fprintf(stderr, "%s %sINFO%2s%s %s%s:'%s':%d%s - %s" MSG "%s\n", \
                 dt, CGRN, "", CEND, ULINE, __FILE__, __func__, __LINE__, CEND, CWHT, ##__VA_ARGS__, CEND);\
 }
 
@@ -51,7 +51,7 @@ get_time(char *src, size_t size)
 {\
         char dt[32];\
         get_time(dt, sizeof(dt));\
-        fprintf(stdout, "%s %sDEBUG%1s%s %s%s:'%s':%d%s - %s" MSG "%s\n", \
+        fprintf(stderr, "%s %sDEBUG%1s%s %s%s:'%s':%d%s - %s" MSG "%s\n", \
                 dt, CBLU, "", CEND, ULINE, __FILE__, __func__, __LINE__, CEND, CWHT, ##__VA_ARGS__, CEND);\
 }
 
@@ -69,7 +69,7 @@ get_time(char *src, size_t size)
 {\
         char dt[32];\
         get_time(dt, sizeof(dt));\
-        fprintf(stdout, "%s %sWARN%2s%s %s%s:'%s':%d%s - %s" MSG "%s\n", \
+        fprintf(stderr, "%s %sWARN%2s%s %s%s:'%s':%d%s - %s" MSG "%s\n", \
                 dt, CYEL, "", CEND, ULINE, __FILE__, __func__, __LINE__, CEND, CWHT, ##__VA_ARGS__, CEND);\
 }
 
