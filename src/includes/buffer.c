@@ -45,7 +45,7 @@ buffer_size(buffer *buffer)
 }
 
 static int
-buffet_has_storage_available(buffer *buffer, uint length)
+buffer_has_storage_available(buffer *buffer, uint length)
 {
         const uint available_storage = buffer->size - buffer->length;
 
@@ -67,7 +67,8 @@ increase_storage_capacity(buffer *buffer, uint size)
 
                 *buffer = (struct buffer) {
                         .data = new_sdata,
-                        .size = new_size
+                        .size = new_size,
+                        .length = buffer->length
                 };
 
                 return 0;
@@ -80,7 +81,7 @@ int
 buffer_append(buffer *buffer, const char *src, uint src_length)
 {
         if (buffer != NULL) {
-                if (!buffet_has_storage_available(buffer, src_length + 1)) {
+                if (!buffer_has_storage_available(buffer, src_length + 1)) {
                         if (increase_storage_capacity(buffer, src_length + 1) < 0) {
                                 LOG_ERROR("increase_storage_capacity() error.");
                                 return -1;
@@ -177,7 +178,7 @@ buffer_to_string(buffer *buffer)
                         return NULL;
                 }
 
-                memmove(string, buffer->data, buffer->length);
+                memmove(string, buffer->data, buffer_length(buffer));
 
                 return string;
         }
