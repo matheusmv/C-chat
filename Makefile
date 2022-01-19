@@ -1,14 +1,17 @@
-CC=gcc
+CC := gcc
 
-CFLAGS=-pedantic-errors -Wall -Werror
+CFLAGS := -pedantic-errors -Wall -Werror
 
-LFLAGS=-lpthread
+CLIENTSRCDIRS := src/includes/ src/client/
+SERVERSRCDIRS := src/includes/ src/server/
 
-CLIENTLIBS=src/includes/*.c src/client/*.c
-SERVERLIBS=src/includes/*.c src/server/*.c
+CLIENTSRCS := $(shell find $(CLIENTSRCDIRS) -name *.c)
+SERVERSRCS := $(shell find $(SERVERSRCDIRS) -name *.c)
 
-CLIENTBIN=client
-SERVERBIN=server
+CLIENTBIN := client
+SERVERBIN := server
+
+LFLAGS := -lpthread
 
 all: CFLAGS +=-O2
 all: release
@@ -17,8 +20,8 @@ debug: CFLAGS +=-O0 -g
 debug: release
 
 release:
-	$(CC) $(CFLAGS) $(CLIENTLIBS) -o $(CLIENTBIN) $(LFLAGS)
-	$(CC) $(CFLAGS) $(SERVERLIBS) -o $(SERVERBIN) $(LFLAGS)
+	$(CC) $(CFLAGS) $(CLIENTSRCS) -o $(CLIENTBIN) $(LFLAGS)
+	$(CC) $(CFLAGS) $(SERVERSRCS) -o $(SERVERBIN) $(LFLAGS)
 
 clean:
 	$(RM) $(CLIENTBIN)
