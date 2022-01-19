@@ -17,8 +17,8 @@ debug: CFLAGS +=-O0 -g
 debug: release
 
 release:
-	$(CC) $(CFLAGS) $(LFLAGS) $(CLIENTLIBS) -o $(CLIENTBIN)
-	$(CC) $(CFLAGS) $(LFLAGS) $(SERVERLIBS) -o $(SERVERBIN)
+	$(CC) $(CFLAGS) $(CLIENTLIBS) -o $(CLIENTBIN) $(LFLAGS)
+	$(CC) $(CFLAGS) $(SERVERLIBS) -o $(SERVERBIN) $(LFLAGS)
 
 clean:
 	rm $(CLIENTBIN)
