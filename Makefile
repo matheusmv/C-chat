@@ -1,9 +1,8 @@
 CC=gcc
 
-CFLAGS=-O2 \
-	-pedantic-errors \
-	-Wall \
-	-Werror \
+CFLAGS=-pedantic-errors -Wall -Werror
+
+LFLAGS=-lpthread
 
 CLIENTLIBS=src/includes/*.c src/client/*.c
 SERVERLIBS=src/includes/*.c src/server/*.c
@@ -11,14 +10,15 @@ SERVERLIBS=src/includes/*.c src/server/*.c
 CLIENTBIN=client
 SERVERBIN=server
 
+all: CFLAGS +=-O2
 all: release
 
-debug: CFLAGS += -g
-debug: all
+debug: CFLAGS +=-O0 -g
+debug: release
 
 release:
-	$(CC) $(CFLAGS) $(CLIENTLIBS) -o $(CLIENTBIN) -lpthread
-	$(CC) $(CFLAGS) $(SERVERLIBS) -o $(SERVERBIN) -lpthread
+	$(CC) $(CFLAGS) $(LFLAGS) $(CLIENTLIBS) -o $(CLIENTBIN)
+	$(CC) $(CFLAGS) $(LFLAGS) $(SERVERLIBS) -o $(SERVERBIN)
 
 clean:
 	rm $(CLIENTBIN)
