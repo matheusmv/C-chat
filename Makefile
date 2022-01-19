@@ -21,5 +21,5 @@ release:
 	$(CC) $(CFLAGS) $(SERVERLIBS) -o $(SERVERBIN) $(LFLAGS)
 
 clean:
-	rm $(CLIENTBIN)
-	rm $(SERVERBIN)
+	$(RM) $(CLIENTBIN)
+	$(RM) $(SERVERBIN)
