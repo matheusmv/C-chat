@@ -1,5 +1,5 @@
 #include "network.h"
-#include "clog.h"
+#include "clogger.h"
 
 SOCKET
 connect_to_server(const char *address, const uint16_t port)

@@ -2,11 +2,13 @@
 #include <unistd.h>
 
 #include "server.h"
-#include "../includes/clog.h"
+#include "../includes/clogger.h"
 #include "../includes/utils.h"
 
 int main(int argc, char *argv[])
 {
+        clogger_create(stderr);
+
         char *server_port = "";
 
         struct option LongOptions[] = {

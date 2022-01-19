@@ -1,5 +1,5 @@
 #include "buffer.h"
-#include "clog.h"
+#include "clogger.h"
 
 buffer *
 new_buffer(uint size)

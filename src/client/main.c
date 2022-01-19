@@ -2,11 +2,13 @@
 #include <unistd.h>
 
 #include "client.h"
-#include "../includes/clog.h"
+#include "../includes/clogger.h"
 #include "../includes/utils.h"
 
 int main(int argc, char *argv[])
 {
+        clogger_create(stderr);
+
         char *server_ip = "";
         char *server_port = "";
         char *username = "";

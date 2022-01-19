@@ -1,5 +1,5 @@
 #include "client.h"
-#include "../includes/clog.h"
+#include "../includes/clogger.h"
 
 static int server_auth(const int, const char *);
 static void *client_send_thr(void *);
