@@ -7,8 +7,6 @@
 
 int main(int argc, char *argv[])
 {
-        clogger_colored_console(ACTIVE);
-
         char *server_ip = "";
         char *server_port = "";
         char *username = "";

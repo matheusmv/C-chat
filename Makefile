@@ -20,8 +20,8 @@ debug: CFLAGS +=-O0 -g
 debug: release
 
 release:
-	$(CC) $(CFLAGS) $(CLIENTSRCS) -o $(CLIENTBIN) $(LFLAGS)
-	$(CC) $(CFLAGS) $(SERVERSRCS) -o $(SERVERBIN) $(LFLAGS)
+	$(CC) $(CFLAGS) $(CLIENTSRCS) -o $(CLIENTBIN) $(LFLAGS) -DLCOLOR
+	$(CC) $(CFLAGS) $(SERVERSRCS) -o $(SERVERBIN) $(LFLAGS) -DLCOLOR
 
 clean:
 	$(RM) $(CLIENTBIN)
