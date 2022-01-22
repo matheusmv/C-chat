@@ -4,80 +4,81 @@
 #include <errno.h>
 #include <pthread.h>
 #include <stdarg.h>
-#include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
+#define true  1
+#define false 0
+
 #define ACTIVE   true
 #define INACTIVE false
 
-typedef void (*logger_fn)(FILE *stream, const char *time, Log_Type type, const char *filename, const char *function, int line, const char *format, va_list args);
-
-typedef struct Clogger Clogger;
-static struct Clogger {
-        FILE *console_stream;
-        bool colored;
-        bool initialized;
-        logger_fn file_logger;
-        logger_fn console_logger;
-} _logger;
-
-typedef void (*init_fn)(pthread_mutex_t *mutex);
-typedef void (*lock_fn)(pthread_mutex_t *mutex);
-typedef void (*unlock_fn)(pthread_mutex_t *mutex);
-
-typedef struct CloggerMutex CloggerMutex;
-static struct CloggerMutex {
+typedef struct clogger {
+        FILE            *output;
+        int8_t          colored;
+        int8_t          initialized;
         pthread_mutex_t mutex;
-        init_fn init;
-        lock_fn lock;
-        unlock_fn unlock;
-} _mutex;
+} clogger_t;
+
+static clogger_t prv_logger;
 
 static void
-init(pthread_mutex_t *mutex)
+clogger_mutex_init(clogger_t *clogger)
 {
-        pthread_mutex_init(mutex, NULL);
+        pthread_mutex_init(&clogger->mutex, NULL);
 }
 
 static void
-lock(pthread_mutex_t *mutex)
+clogger_mutex_lock(clogger_t *clogger)
 {
-        pthread_mutex_lock(mutex);
+        pthread_mutex_lock(&clogger->mutex);
 }
 
 static void
-unlock(pthread_mutex_t *mutex)
+clogger_mutex_unlock(clogger_t *clogger)
 {
-        pthread_mutex_unlock(mutex);
+        pthread_mutex_unlock(&clogger->mutex);
 }
 
-static struct CloggerMutex
-CloggerMutex_create(void)
+static clogger_t
+clogger_create(void)
 {
-        return (struct CloggerMutex) { .init = init, .lock = lock, .unlock = unlock };
+        clogger_t new_logger = (clogger_t) {
+                .output         = stderr,
+                .colored        = INACTIVE,
+                .initialized    = true
+        };
+
+        clogger_mutex_init(&new_logger);
+
+        return new_logger;
 }
 
 static void
-clogger_log(FILE *stream, const char *time, const char *log_level, const char *filename, const char *function, int line, const char *format, va_list args)
+clogger_log(FILE *stream, const char *time, const char *log_level,
+            const char *filename, const char *function, int line,
+            const char *format, va_list args)
 {
         char message[MSGMAXLENGTH];
-        vsnprintf(message, sizeof message, format, args);
-        fprintf(stream, "%s %s %s:'%s':%d - %s\n", time, log_level, filename, function, line, message);
+
+        vsnprintf(message, sizeof(message), format, args);
+        fprintf(stream, "%s %s %s:'%s':%d - %s\n", time, log_level, filename,
+                function, line, message);
 }
 
 static char *
-clogger_type_string(Log_Type type, bool colored)
+log_type_to_string(log_type_t type, int8_t colored)
 {
         switch (type) {
-        case Log_INFO:
+        case INFO:
                 return colored ? "\x1B[32mINFO\033[0m " : "INFO ";
-        case Log_DEBUG:
+        case DEBUG:
                 return colored ? "\x1B[34mDEBUG\033[0m" : "DEBUG";
-        case Log_WARN:
+        case WARN:
                 return colored ? "\x1B[33mWARN\033[0m " : "WARN ";
-        case Log_ERROR:
+        case ERROR:
                 return colored ? "\x1B[31mERROR\033[0m" : "ERROR";
         default:
                 return "UNDEF";
@@ -85,36 +86,16 @@ clogger_type_string(Log_Type type, bool colored)
 }
 
 static void
-log_to_file(FILE *stream, const char *time, Log_Type type, const char *filename, const char *function, int line, const char *format, va_list args)
-{
-        clogger_log(stream, time, clogger_type_string(type, INACTIVE), filename, function, line, format, args);
-}
-
-static void
-log_to_console(FILE *stream, const char *time, Log_Type type, const char *filename, const char *function, int line, const char *format, va_list args)
-{
-        clogger_log(stream, time, clogger_type_string(type, _logger.colored), filename, function, line, format, args);
-}
-
-static void
 clogger_init(void)
 {
-        _mutex = CloggerMutex_create();
-        _mutex.init(&_mutex.mutex);
+        prv_logger = clogger_create();
+        clogger_mutex_lock(&prv_logger);
 
-        _mutex.lock(&_mutex.mutex);
-
-        _logger.console_stream = stderr;
-#ifdef LCOLOR
-        _logger.colored = ACTIVE;
-#else
-        _logger.colored = INACTIVE;
+#if defined(LCOLOR)
+        prv_logger.colored = ACTIVE;
 #endif
-        _logger.initialized = true;
-        _logger.file_logger = log_to_file;
-        _logger.console_logger = log_to_console;
 
-        _mutex.unlock(&_mutex.mutex);
+        clogger_mutex_unlock(&prv_logger);
 }
 
 static void
@@ -127,14 +108,13 @@ get_time(char *dest, size_t dest_size)
 
         seconds = time(NULL);
         localtime_r(&seconds, &time_info);
-
         strftime(dest, dest_size, "%b %d %Y %X", &time_info);
 }
 
-void
-clogger(Log_Type type, const char *filename, const char *function, int line, const char *format, ...)
+void clogger(log_type_t type, const char *filename, const char *function,
+             int line, const char *format, ...)
 {
-        if (!_logger.initialized) {
+        if (!prv_logger.initialized) {
                 clogger_init();
         }
 
@@ -142,23 +122,25 @@ clogger(Log_Type type, const char *filename, const char *function, int line, con
 
         char date_time[32];
 
-        _mutex.lock(&_mutex.mutex);
+        clogger_mutex_lock(&prv_logger);
 
         va_start(args, format);
 
-        get_time(date_time, sizeof date_time);
+        get_time(date_time, sizeof(date_time));
 
-        _logger.console_logger(_logger.console_stream, date_time, type, filename, function, line, format, args);
+        char *log_type_str = log_type_to_string(type, prv_logger.colored);
+        clogger_log(prv_logger.output, date_time, log_type_str, filename,
+                    function, line, format, args);
 
         va_end(args);
 
-        _mutex.unlock(&_mutex.mutex);
+        clogger_mutex_unlock(&prv_logger);
 }
 
-void
-clogger_f(Log_Type type, const char *filepath, const char *filename, const char *function, int line, const char *format, ...)
+void clogger_f(log_type_t type, const char *filepath, const char *filename,
+               const char *function, int line, const char *format, ...)
 {
-        if (!_logger.initialized) {
+        if (!prv_logger.initialized) {
                 clogger_init();
         }
 
@@ -166,24 +148,26 @@ clogger_f(Log_Type type, const char *filepath, const char *filename, const char 
 
         char date_time[32];
 
-        _mutex.lock(&_mutex.mutex);
+        clogger_mutex_lock(&prv_logger);
 
-        FILE *file = NULL;
-        if ((file = fopen(filepath, "a")) == NULL) {
+        FILE *file = fopen(filepath, "a");
+        if (file == NULL) {
                 fprintf(stderr, "%s - %s\n", strerror(errno), filepath);
-                _mutex.unlock(&_mutex.mutex);
+                clogger_mutex_unlock(&prv_logger);
                 return;
         }
 
         va_start(args, format);
 
-        get_time(date_time, sizeof date_time);
+        get_time(date_time, sizeof(date_time));
 
-        _logger.file_logger(file, date_time, type, filename, function, line, format, args);
+        char *log_type_str = log_type_to_string(type, INACTIVE);
+        clogger_log(file, date_time, log_type_str, filename, function, line,
+                    format, args);
 
         va_end(args);
 
         fclose(file);
 
-        _mutex.unlock(&_mutex.mutex);
+        clogger_mutex_unlock(&prv_logger);
 }
