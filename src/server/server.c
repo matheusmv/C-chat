@@ -1,60 +1,381 @@
 #include "server.h"
 #include "../includes/clogger.h"
 
+#include <assert.h>
+#include <errno.h>
+#include <pthread.h>
+#include <signal.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#define true  1
+#define false 0
+
 typedef struct client {
-        SOCKET socket;
-        char *address;
-        uint16_t port;
-        pthread_t tid;
-        char username[BUFFER_SIZE];
-        char message[BUFFER_SIZE];
-} client;
+        pthread_t thread;
+        uint16_t  port;
+        char      *address;
+        SOCKET    tcp_socket;
+        char      username[BUFFER_SIZE];
+        char      message[BUFFER_SIZE];
+} client_t;
 
-static void handle_connections(SOCKET *);
-static void increase_total_connections();
-static void decrease_total_connections();
-static int client_auth(client *);
-static client *register_client(client *);
-static void *server_thread_func(void *);
-static void list_online_clients(client *);
-static void build_message(const client *, char *, size_t);
-static void get_current_time(char *, size_t);
-static void send_public_message(client *);
-static int extract_username_and_message(const char *, char *, char *);
-static void send_private_message(client *);
-static void disconnect_client(client *);
-static void send_message(const uint16_t, const char *);
+typedef struct server {
+        SOCKET          tcp_socket;
+        int8_t          running;
+        int8_t          initialized;
+        int32_t         connected_clients;
+        client_t        clients[MAX_CONNECTIONS];
+        pthread_mutex_t mutex;
+} server_t;
 
-pthread_mutex_t MUTEX = PTHREAD_MUTEX_INITIALIZER;
-client CONNECTED_CLIENTS[MAX_CONNECTIONS];
-static int TOTAL_CONNECTIONS = 0;
-static int RUN = 1;
+/* client */
+
+static client_t client_create(const SOCKET *tcp_socket, const struct sockaddr_in *net_detatils);
+static void *client_thread_fn(void *arg);
+
+/* server */
+
+static server_t server_create(SOCKET *socket);
+static void server_mutex_init(server_t *server);
+static void server_mutex_lock(server_t *server);
+static void server_mutex_unlock(server_t *server);
+static void server_mutex_destroy(server_t *server);
+static void server_increase_connected_clients(server_t *server);
+static void server_decrease_connected_clients(server_t *server);
+static int server_authenticate_client(server_t *server, client_t *client);
+static client_t *server_register_authenticated_client(server_t *server, client_t *client);
+static void server_list_online_clients(server_t *server, client_t *client);
+static void server_send_private_message(server_t *server, client_t *client);
+static void server_send_public_message(server_t *server, client_t *client);
+static void server_disconnect_client(server_t *server, client_t *client);
+
+/* utils */
+
+static void sigint_handler(int signum);
+static void handle_connections(server_t * server);
+static void build_message(const client_t *client, char *buffer, size_t size);
+static void get_current_time(char *buffer, size_t size);
+static int extract_username_and_message(const char *src, char *username, size_t usize, char *message, size_t msize);
+
+static server_t prv_server;
 
 void
 start_server(const uint16_t port)
 {
-        SOCKET s_socket = create_server(port);
+        SOCKET s_socket = create_server_socket(port);
+        if (!ISVALIDSOCKET(s_socket)) {
+                LOG_ERROR("create_server_socket() failed. %s", strerror(errno));
+                exit(EXIT_FAILURE);
+        }
 
-        handle_connections(&s_socket);
+        prv_server = server_create(&s_socket);
+
+        handle_connections(&prv_server);
 }
+
+/* client impl */
+
+static client_t
+client_create(const SOCKET *socket, const struct sockaddr_in *net_detatils)
+{
+        client_t new_client = (client_t) {
+                .tcp_socket     = *socket,
+                .port           = ntohs(net_detatils->sin_port),
+                .address        = inet_ntoa(net_detatils->sin_addr)
+        };
+
+        return new_client;
+}
+
+static void *
+client_thread_fn(void *arg)
+{
+        client_t *client = arg;
+
+        LOG_INFO("Client connected - IP: %s PORT: %d", client->address, client->port);
+
+        int status = 0;
+        while ((status = receive_message(&client->tcp_socket, client->message, BUFFER_SIZE))) {
+                if (status < 0) {
+                        LOG_ERROR("receive_message() failed. %s", strerror(errno));
+                        break;
+                }
+
+                char *msg = client->message;
+
+                if (strncmp(msg, DISCONNECT, strlen(DISCONNECT)) == 0) {
+                        send_message(&client->tcp_socket, DISCONNECT, strlen(DISCONNECT));
+                        server_disconnect_client(&prv_server, client);
+                        return NULL;
+                }
+
+                if (strncmp(msg, LIST_ONLINE_CLIENTS, strlen(LIST_ONLINE_CLIENTS)) == 0) {
+                        server_list_online_clients(&prv_server, client);
+                        continue;
+                }
+
+                if (strncmp(msg, SEND_PRIVATE_MESSAGE, strlen(SEND_PRIVATE_MESSAGE)) == 0) {
+                        server_send_private_message(&prv_server, client);
+                        continue;
+                }
+
+                if (!strncmp(msg, "\n", strlen("\n")) == 0) {
+                        server_send_public_message(&prv_server, client);
+                        continue;
+                }
+        }
+
+        server_disconnect_client(&prv_server, client);
+
+        return NULL;
+}
+
+/* server impl */
+
+static server_t
+server_create(SOCKET *socket)
+{
+        server_t new_server = (server_t) {
+                .tcp_socket     = *socket,
+                .running        = true,
+                .initialized    = true,
+        };
+
+        server_mutex_init(&new_server);
+
+        return new_server;
+}
+
+static void
+server_mutex_init(server_t *server)
+{
+        pthread_mutex_init(&server->mutex, NULL);
+}
+
+static void
+server_mutex_lock(server_t *server)
+{
+        pthread_mutex_lock(&server->mutex);
+}
+
+static void
+server_mutex_unlock(server_t *server)
+{
+        pthread_mutex_unlock(&server->mutex);
+}
+
+static void
+server_mutex_destroy(server_t *server)
+{
+        pthread_mutex_destroy(&server->mutex);
+}
+
+static void
+server_increase_connected_clients(server_t *server)
+{
+        server->connected_clients += 1;
+}
+
+static void
+server_decrease_connected_clients(server_t *server)
+{
+        if (server->connected_clients > 0) {
+                server->connected_clients -= 1;
+        }
+}
+
+static int
+server_authenticate_client(server_t *server, client_t *client)
+{
+        int successfully_authenticated = false;
+
+        memset(client->username, 0, BUFFER_SIZE);
+        memset(client->message, 0, BUFFER_SIZE);
+
+        int status = 0;
+        status = receive_message(&client->tcp_socket, client->message, BUFFER_SIZE);
+        if (status < 0) {
+                LOG_ERROR("receive_message() failed. %s", strerror(errno));
+                return successfully_authenticated;
+        }
+
+        memmove(client->username, client->message, BUFFER_SIZE);
+        memset(client->message, 0, BUFFER_SIZE);
+
+        for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+                char *name = server->clients[i].username;
+
+                if (strcmp(name, client->username) == 0) {
+                        send_message(&client->tcp_socket, AUTH_FAILURE_MESSAGE, strlen(AUTH_FAILURE_MESSAGE));
+                        server_disconnect_client(server, client);
+                        return successfully_authenticated;
+                }
+        }
+
+        send_message(&client->tcp_socket, SUCCESS_MESSSAGE, strlen(SUCCESS_MESSSAGE));
+
+        successfully_authenticated = true;
+
+        return successfully_authenticated;
+}
+
+static client_t *
+server_register_authenticated_client(server_t *server, client_t *client)
+{
+        server_mutex_lock(server);
+
+        int index;
+        for (index = 0; index < MAX_CONNECTIONS; ++index) {
+                SOCKET socket = server->clients[index].tcp_socket;
+
+                if (!ISACTIVESOCKET(socket)) {
+                        memmove(&server->clients[index], client, sizeof(client_t));
+                        server_increase_connected_clients(server);
+                        break;
+                }
+        }
+
+        server_mutex_unlock(server);
+
+        return &server->clients[index];
+}
+
+static void
+server_list_online_clients(server_t *server, client_t *client)
+{
+        if (server->connected_clients < 2) {
+                memset(client->message, 0, BUFFER_SIZE);
+                send_message(&client->tcp_socket, NO_USERS_ONLINE_MESSAGE, strlen(NO_USERS_ONLINE_MESSAGE));
+                return;
+        }
+
+        buffer *buff = new_buffer(5 * BUFFER_SIZE);
+
+        for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+                SOCKET socket = server->clients[i].tcp_socket;
+
+                if (ISACTIVESOCKET(socket) && socket != client->tcp_socket) {
+                        char *address = server->clients[i].address;
+                        uint16_t port = server->clients[i].port;
+                        char *username = server->clients[i].username;
+
+                        buffer_appendf(buff, "[%s:%d] %s\r\n", address, port, username);
+                }
+        }
+
+        char *msg = buffer_to_string(buff);
+
+        send_message(&client->tcp_socket, msg, strlen(msg));
+
+        buffer_free(buff);
+        free(msg);
+
+        memset(client->message, 0, BUFFER_SIZE);
+}
+
+static void
+server_send_private_message(server_t *server, client_t *client)
+{
+        if (server->connected_clients < 2) {
+                memset(client->message, 0, BUFFER_SIZE);
+                send_message(&client->tcp_socket, NO_USERS_ONLINE_MESSAGE, strlen(NO_USERS_ONLINE_MESSAGE));
+                return;
+        }
+
+        char recipient_username[BUFFER_SIZE];
+        char message_to_recipient[BUFFER_SIZE];
+
+        int status = 0;
+        status = extract_username_and_message(client->message, recipient_username, BUFFER_SIZE, message_to_recipient, BUFFER_SIZE);
+        if (status < 0) {
+                memset(client->message, 0, BUFFER_SIZE);
+                send_message(&client->tcp_socket, INVALID_MESSAGE_FORMAT, strlen(INVALID_MESSAGE_FORMAT));
+                return;
+        }
+
+        int message_sent = false;
+
+        for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+                char *username = server->clients[i].username;
+
+                if (strncmp(username, recipient_username, BUFFER_SIZE) == 0) {
+                        memset(client->message, 0, BUFFER_SIZE);
+                        strncpy(client->message, message_to_recipient, BUFFER_SIZE);
+                        build_message(client, message_to_recipient, BUFFER_SIZE);
+                        send_message(&server->clients[i].tcp_socket, message_to_recipient, strlen(message_to_recipient));
+                        message_sent = true;
+                        break;
+                }
+        }
+
+        memset(client->message, 0, BUFFER_SIZE);
+
+        if (!message_sent) {
+                send_message(&client->tcp_socket, PRIVATE_MESSAGE_FAILURE, strlen(PRIVATE_MESSAGE_FAILURE));
+        }
+}
+
+static void
+server_send_public_message(server_t *server, client_t *client)
+{
+        char message_sent[BUFFER_SIZE];
+        build_message(client, message_sent, BUFFER_SIZE);
+
+        for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+                SOCKET socket = server->clients[i].tcp_socket;
+
+                if (ISACTIVESOCKET(socket) && socket != client->tcp_socket) {
+                        send_message(&socket, message_sent, strlen(message_sent));
+                }
+        }
+
+        memset(client->message, 0, BUFFER_SIZE);
+}
+
+static void
+server_disconnect_client(server_t *server, client_t *client)
+{
+        server_mutex_lock(server);
+
+        LOG_INFO("Client disconnects - IP: %s PORT: %d", client->address, client->port);
+
+        CLOSESOCKET(client->tcp_socket);
+
+        for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+                SOCKET socket = server->clients[i].tcp_socket;
+
+                if (socket == client->tcp_socket) {
+                        memset(&server->clients[i], 0, sizeof(client_t));
+                        server_decrease_connected_clients(server);
+                        break;
+                }
+        }
+
+        server_mutex_unlock(server);
+}
+
+/* utils impl */
 
 static void
 sigint_handler(int signum)
 {
-        if (TOTAL_CONNECTIONS > 0) {
+        if (prv_server.connected_clients > 0) {
                 LOG_WARNING("there are still users connected to the server.");
         } else {
-                RUN = 0;
+                CLOSESOCKET(prv_server.tcp_socket);
+                prv_server.running = false;
+                server_mutex_destroy(&prv_server);
         }
 }
 
 static void
-handle_connections(SOCKET *s_socket)
+handle_connections(server_t *server)
 {
-        if (s_socket == NULL) {
-                LOG_ERROR("invalid parameters");
-                exit(EXIT_FAILURE);
-        }
+        assert(server != NULL);
 
         struct sigaction action;
         action.sa_flags = 0;
@@ -62,207 +383,37 @@ handle_connections(SOCKET *s_socket)
         action.sa_handler = sigint_handler;
         sigaction(SIGINT, &action, NULL);
 
-        pthread_attr_t attr;
-        pthread_attr_init(&attr);
-        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+        pthread_attr_t detached_attr;
+        pthread_attr_init(&detached_attr);
+        pthread_attr_setdetachstate(&detached_attr, PTHREAD_CREATE_DETACHED);
 
         struct sockaddr_in client_details;
-        client new_client;
+        client_t new_client;
 
-        while (RUN) {
-                SOCKET c_socket = accept_new_client(s_socket, &client_details);
+        while (server->running) {
+                SOCKET c_socket = accept_new_client(&server->tcp_socket, &client_details);
                 if (!ISVALIDSOCKET(c_socket)) {
                         LOG_ERROR("accept_new_client() failed. %s", strerror(errno));
                         continue;
                 }
 
-                memset(&new_client, 0, sizeof(new_client));
-                new_client.socket = c_socket;
-                new_client.address = inet_ntoa(client_details.sin_addr);
-                new_client.port = ntohs(client_details.sin_port);
+                new_client = client_create(&c_socket, &client_details);
 
-                if (TOTAL_CONNECTIONS == MAX_CONNECTIONS) {
-                        send_message(new_client.socket, MAX_LIMIT_MESSAGE);
-                        disconnect_client(&new_client);
+                if (server->connected_clients == MAX_CONNECTIONS) {
+                        send_message(&new_client.tcp_socket, MAX_LIMIT_MESSAGE, strlen(MAX_LIMIT_MESSAGE));
+                        server_disconnect_client(server, &new_client);
                         continue;
                 }
 
-                if (client_auth(&new_client) > 0) {
-                        client *arg = register_client(&new_client);
-                        pthread_create(&new_client.tid, &attr, server_thread_func, (void *) arg);
+                if (server_authenticate_client(server, &new_client)) {
+                        client_t *arg = server_register_authenticated_client(server, &new_client);
+                        pthread_create(&arg->thread, &detached_attr, client_thread_fn, (void *) arg);
                 }
         }
 
-        CLOSESOCKET(*s_socket);
-        pthread_attr_destroy(&attr);
-        pthread_mutex_destroy(&MUTEX);
+        pthread_attr_destroy(&detached_attr);
+
         exit(EXIT_SUCCESS);
-}
-
-static void
-increase_total_connections()
-{
-        TOTAL_CONNECTIONS++;
-}
-
-static void
-decrease_total_connections()
-{
-        if (TOTAL_CONNECTIONS > 0) {
-                TOTAL_CONNECTIONS--;
-        }
-}
-
-static int
-client_auth(client *client)
-{
-        int auth_status = -1;
-
-        memset(client->username, 0, sizeof(client->message));
-        memset(client->message, 0, sizeof(client->message));
-
-        if (recv(client->socket, client->message, sizeof(client->message), 0) <= 0) {
-                LOG_ERROR("recv() failed. %s", strerror(errno));
-                return auth_status;
-        }
-
-        strncpy(client->username, client->message, sizeof(client->username));
-
-        memset(client->message, 0, sizeof(client->message));
-
-        for (int i = 0; i < MAX_CONNECTIONS; i++) {
-                if (strcmp(CONNECTED_CLIENTS[i].username, client->username) == 0) {
-                        send_message(client->socket, AUTH_FAILURE_MESSAGE);
-                        disconnect_client(client);
-                        return auth_status;
-                }
-        }
-
-        send_message(client->socket, SUCCESS_MESSSAGE);
-
-        auth_status = 1;
-
-        return auth_status;
-}
-
-static client *
-register_client(client *client)
-{
-        pthread_mutex_lock(&MUTEX);
-        int client_index;
-
-        for (client_index = 0; client_index < MAX_CONNECTIONS; client_index++) {
-                if (CONNECTED_CLIENTS[client_index].socket <= 0) {
-                        memmove(&CONNECTED_CLIENTS[client_index], client, sizeof(struct client));
-                        increase_total_connections();
-                        break;
-                }
-        }
-        pthread_mutex_unlock(&MUTEX);
-
-        return &CONNECTED_CLIENTS[client_index];
-}
-
-static void *
-server_thread_func(void *arg)
-{
-        client *client = arg;
-
-        LOG_INFO("Client connected - IP: %s PORT: %d", client->address, client->port);
-
-        int status = 0;
-        while ((status = recv(client->socket, client->message, sizeof(client->message), 0))) {
-                if (status < 0) {
-                        LOG_ERROR("recv() failed. %s", strerror(errno));
-                        break;
-                }
-
-                if (strncmp(client->message, SEND_PRIVATE_MESSAGE, strlen(SEND_PRIVATE_MESSAGE)) == 0) {
-                        send_private_message(client);
-                        continue;
-                }
-
-                if (strncmp(client->message, LIST_ONLINE_CLIENTS, strlen(LIST_ONLINE_CLIENTS)) == 0) {
-                        list_online_clients(client);
-                        continue;
-                }
-
-                if (strncmp(client->message, DISCONNECT, strlen(DISCONNECT)) == 0) {
-                        send_message(client->socket, DISCONNECT);
-                        disconnect_client(client);
-                        return NULL;
-                }
-
-                if (!strncmp(client->message, "\n", strlen("\n")) == 0) {
-                        printf("[%s:%d] %s >>> %s",
-                               client->address, client->port, client->username, client->message);
-
-                        send_public_message(client);
-                }
-        }
-
-        disconnect_client(client);
-
-        return NULL;
-}
-
-static void
-list_online_clients(client *client)
-{
-        if (TOTAL_CONNECTIONS > 1) {
-                buffer *buff = new_buffer(4 * BUFFER_SIZE);
-
-                for (int i = 0; i < MAX_CONNECTIONS; i++) {
-                        SOCKET socketfd = CONNECTED_CLIENTS[i].socket;
-
-                        if (socketfd > 0 && socketfd != client->socket) {
-                                buffer_appendf(buff, "[%s:%d] %s\r\n",
-                                               CONNECTED_CLIENTS[i].address,
-                                               CONNECTED_CLIENTS[i].port,
-                                               CONNECTED_CLIENTS[i].username);
-                        }
-                }
-
-                char *message = buffer_to_string(buff);
-                send_message(client->socket, message);
-                free(message);
-
-                buffer_free(buff);
-
-                memset(client->message, 0, sizeof(client->message));
-
-                return;
-        }
-
-        memset(client->message, 0, sizeof(client->message));
-        send_message(client->socket, NO_USERS_ONLINE_MESSAGE);
-}
-
-static void
-build_message(const client *client, char *message, size_t message_size)
-{
-        /* Msg of 'username' ['address':'port']:[hh:mm GMT] 'message' */
-        buffer *buff = new_buffer(4 * BUFFER_SIZE);
-
-        char sent_at[50];
-        memset(sent_at, 0, sizeof(sent_at));
-        get_current_time(sent_at, sizeof(sent_at));
-
-        const char *format = "Msf of %s [%s:%d]:[%s] %s";
-        buffer_appendf(buff, format,
-                       client->username,
-                       client->address,
-                       client->port,
-                       sent_at,
-                       client->message);
-
-        char *result = buffer_to_string(buff);
-
-        memset(message, 0, message_size);
-        memmove(message, result, strlen(result));
-
-        buffer_free(buff);
-        free(result);
 }
 
 static void
@@ -278,31 +429,35 @@ get_current_time(char *buffer, size_t buffer_size)
 }
 
 static void
-send_public_message(client *client)
+build_message(const client_t *client, char *message, size_t message_size)
 {
-        char message[BUFFER_SIZE];
+        /* Msg of 'username' ['address':'port']:[hh:mm GMT] 'message' */
+        buffer *buff = new_buffer(5 * BUFFER_SIZE);
 
-        build_message(client, message, BUFFER_SIZE);
+        char sent_at[50];
+        memset(sent_at, 0, sizeof(sent_at));
+        get_current_time(sent_at, sizeof(sent_at));
 
-        for (int i = 0; i < MAX_CONNECTIONS; i++) {
-                SOCKET socketfd = CONNECTED_CLIENTS[i].socket;
+        const char *format = "Msf of %s [%s:%d]:[%s] %s";
+        buffer_appendf(buff, format, client->username, client->address, client->port, sent_at, client->message);
 
-                if (socketfd > 0 && socketfd != client->socket) {
-                        send_message(CONNECTED_CLIENTS[i].socket, message);
-                }
-        }
+        char *result = buffer_to_string(buff);
 
-        memset(client->message, 0, sizeof(client->message));
+        memset(message, 0, message_size);
+        memmove(message, result, strlen(result));
+
+        buffer_free(buff);
+        free(result);
 }
 
 static int
-extract_username_and_message(const char *message_rcvd, char *username, char *message)
+extract_username_and_message(const char *src, char *username, size_t usize, char *message, size_t msize)
 {
         const char *utoken = "-u ";
         const char *mtoken = "-m ";
 
-        char *usr = strstr(message_rcvd, utoken);
-        char *msg = strstr(message_rcvd, mtoken);
+        char *usr = strstr(src, utoken);
+        char *msg = strstr(src, mtoken);
         if (usr == NULL || msg == NULL) {
                 return -1;
         }
@@ -316,88 +471,16 @@ extract_username_and_message(const char *message_rcvd, char *username, char *mes
                 return -1;
         }
 
-        for (int i = usr_start, j = 0; i < usr_end; i++, j++) {
+        memset(username, 0, usize);
+        memset(message, 0, msize);
+
+        for (int i = usr_start, j = 0; i < usr_end; ++i, ++j) {
                 username[j] = usr[i];
         }
 
-        for (int i = msg_start, j = 0; i < msg_end; i++, j++) {
+        for (int i = msg_start, j = 0; i < msg_end; ++i, ++j) {
                 message[j] = msg[i];
         }
 
         return 0;
-}
-
-static void
-send_private_message(client *client)
-{
-        if (TOTAL_CONNECTIONS < 2) {
-                memset(client->message, 0, sizeof(client->message));
-                send_message(client->socket, NO_USERS_ONLINE_MESSAGE);
-                return;
-        }
-
-        char dest_username[BUFFER_SIZE];
-        memset(dest_username, 0, BUFFER_SIZE);
-        char message[BUFFER_SIZE];
-        memset(message, 0, BUFFER_SIZE);
-
-        int status = 0;
-        status = extract_username_and_message(client->message, dest_username, message);
-        if (status < 0) {
-                memset(client->message, 0, sizeof(client->message));
-                send_message(client->socket, INVALID_MESSAGE_FORMAT);
-                return;
-        }
-
-        for (int i = 0; i < MAX_CONNECTIONS; i++) {
-                char *usrname = CONNECTED_CLIENTS[i].username;
-
-                if (strncmp(usrname, dest_username, BUFFER_SIZE) == 0) {
-
-                        memset(client->message, 0, sizeof(client->message));
-                        strncpy(client->message, message, sizeof(client->message));
-                        build_message(client, message, sizeof(message));
-                        send_message(CONNECTED_CLIENTS[i].socket, message);
-
-                        status = 1;
-                        break;
-                }
-        }
-
-        memset(client->message, 0, sizeof(client->message));
-
-        if (status < 1) {
-                send_message(client->socket, PRIVATE_MESSAGE_FAILURE);
-        }
-}
-
-static void
-disconnect_client(client *client)
-{
-        pthread_mutex_lock(&MUTEX);
-        LOG_INFO("Client disconnects - IP: %s PORT: %d", client->address, client->port);
-
-        CLOSESOCKET(client->socket);
-
-        for (int i = 0; i < MAX_CONNECTIONS; i++) {
-                SOCKET socketfd = CONNECTED_CLIENTS[i].socket;
-
-                if (socketfd == client->socket) {
-                        memset(&CONNECTED_CLIENTS[i], 0, sizeof(struct client));
-                        decrease_total_connections();
-                        break;
-                }
-        }
-        pthread_mutex_unlock(&MUTEX);
-}
-
-static void
-send_message(const uint16_t socketfd, const char *message)
-{
-        int status = 0;
-
-        status = send(socketfd, message, strlen(message), 0);
-        if (status < 0) {
-                LOG_ERROR("send() failed. %s", strerror(errno));
-        }
 }

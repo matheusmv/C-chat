@@ -1,6 +1,8 @@
 #include "network.h"
 #include "clogger.h"
 
+#include <assert.h>
+
 SOCKET
 connect_to_server(const char *address, const uint16_t port)
 {
@@ -29,7 +31,7 @@ connect_to_server(const char *address, const uint16_t port)
 }
 
 SOCKET
-create_server(const uint16_t port)
+create_server_socket(const uint16_t port)
 {
         SOCKET socketfd = 0;
         int status = 0;
@@ -79,4 +81,26 @@ accept_new_client(SOCKET *server_socket, struct sockaddr_in *client_details)
         socketfd = accept(*server_socket, (struct sockaddr *) client_details, &addrlen);
 
         return socketfd;
+}
+
+int
+receive_message(const SOCKET *socket, char *buffer, size_t size)
+{
+        assert(socket != NULL && buffer != NULL && size > 0);
+
+        int status = 0;
+        status = recv(*socket, buffer, size, 0);
+
+        return status;
+}
+
+int
+send_message(const SOCKET *socket, const char *message, size_t length)
+{
+        assert(socket != NULL && message != NULL && length > 0);
+
+        int status = 0;
+        status = send(*socket, message, length, 0);
+
+        return status;
 }

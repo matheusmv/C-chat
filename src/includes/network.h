@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#define ISACTIVESOCKET(s) ((s) > 0)
 #define ISVALIDSOCKET(s) ((s) >= 0)
 #define CLOSESOCKET(s) close(s)
 #define SOCKET int
@@ -22,7 +23,9 @@
 #define DISCONNECT ":exit:"
 
 SOCKET connect_to_server(const char *address, const uint16_t port);
-SOCKET create_server(const uint16_t port);
+SOCKET create_server_socket(const uint16_t port);
 SOCKET accept_new_client(SOCKET *server_socket, struct sockaddr_in *client_details);
+int receive_message(const SOCKET *socket, char *buffer, size_t size);
+int send_message(const SOCKET *socket, const char *message, size_t length);
 
 #endif

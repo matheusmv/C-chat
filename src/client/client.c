@@ -4,7 +4,6 @@
 static int server_auth(const int, const char *);
 static void *client_send_thr(void *);
 static void *client_recv_thr(void *);
-static void send_message(const uint16_t, const char *);
 
 void
 start_client(const char *address, const uint16_t port, const char *username)
@@ -65,12 +64,12 @@ client_send_thr(void *arg)
                         (sizeof(final_message) - strlen(client_input) - 1));
 
                 if (strncmp(final_message, DISCONNECT, strlen(DISCONNECT)) == 0) {
-                        send_message(*client_socket, DISCONNECT);
+                        send_message(client_socket, DISCONNECT, strlen(DISCONNECT));
                         client_socket = NULL;
                         return NULL;
                 }
 
-                send_message(*client_socket, final_message);
+                send_message(client_socket, final_message, strlen(final_message));
         }
 
         return NULL;
@@ -102,12 +101,4 @@ client_recv_thr(void *arg)
         }
 
         return NULL;
-}
-
-static void
-send_message(const uint16_t client_socket, const char *message)
-{
-        if (send(client_socket, message, strlen(message), 0) < 0) {
-                LOG_ERROR("send() failed. %s", strerror(errno));
-        }
 }
