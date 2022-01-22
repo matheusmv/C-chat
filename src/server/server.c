@@ -191,6 +191,8 @@ server_decrease_connected_clients(server_t *server)
 static int
 server_authenticate_client(server_t *server, client_t *client)
 {
+        server_mutex_lock(server);
+
         int successfully_authenticated = false;
 
         memset(client->username, 0, BUFFER_SIZE);
@@ -200,6 +202,7 @@ server_authenticate_client(server_t *server, client_t *client)
         status = receive_message(&client->tcp_socket, client->message, BUFFER_SIZE);
         if (status < 0) {
                 LOG_ERROR("receive_message() failed. %s", strerror(errno));
+                server_mutex_unlock(server);
                 return successfully_authenticated;
         }
 
@@ -211,6 +214,7 @@ server_authenticate_client(server_t *server, client_t *client)
 
                 if (strcmp(name, client->username) == 0) {
                         send_message(&client->tcp_socket, AUTH_FAILURE_MESSAGE, strlen(AUTH_FAILURE_MESSAGE));
+                        server_mutex_unlock(server);
                         server_disconnect_client(server, client);
                         return successfully_authenticated;
                 }
@@ -219,6 +223,8 @@ server_authenticate_client(server_t *server, client_t *client)
         send_message(&client->tcp_socket, SUCCESS_MESSSAGE, strlen(SUCCESS_MESSSAGE));
 
         successfully_authenticated = true;
+
+        server_mutex_unlock(server);
 
         return successfully_authenticated;
 }
@@ -247,9 +253,12 @@ server_register_authenticated_client(server_t *server, client_t *client)
 static void
 server_list_online_clients(server_t *server, client_t *client)
 {
+        server_mutex_lock(server);
+
         if (server->connected_clients < 2) {
                 memset(client->message, 0, BUFFER_SIZE);
                 send_message(&client->tcp_socket, NO_USERS_ONLINE_MESSAGE, strlen(NO_USERS_ONLINE_MESSAGE));
+                server_mutex_unlock(server);
                 return;
         }
 
@@ -275,14 +284,19 @@ server_list_online_clients(server_t *server, client_t *client)
         free(msg);
 
         memset(client->message, 0, BUFFER_SIZE);
+
+        server_mutex_unlock(server);
 }
 
 static void
 server_send_private_message(server_t *server, client_t *client)
 {
+        server_mutex_lock(server);
+
         if (server->connected_clients < 2) {
                 memset(client->message, 0, BUFFER_SIZE);
                 send_message(&client->tcp_socket, NO_USERS_ONLINE_MESSAGE, strlen(NO_USERS_ONLINE_MESSAGE));
+                server_mutex_unlock(server);
                 return;
         }
 
@@ -294,6 +308,7 @@ server_send_private_message(server_t *server, client_t *client)
         if (status < 0) {
                 memset(client->message, 0, BUFFER_SIZE);
                 send_message(&client->tcp_socket, INVALID_MESSAGE_FORMAT, strlen(INVALID_MESSAGE_FORMAT));
+                server_mutex_unlock(server);
                 return;
         }
 
@@ -317,11 +332,15 @@ server_send_private_message(server_t *server, client_t *client)
         if (!message_sent) {
                 send_message(&client->tcp_socket, PRIVATE_MESSAGE_FAILURE, strlen(PRIVATE_MESSAGE_FAILURE));
         }
+
+        server_mutex_unlock(server);
 }
 
 static void
 server_send_public_message(server_t *server, client_t *client)
 {
+        server_mutex_lock(server);
+
         char message_sent[BUFFER_SIZE];
         build_message(client, message_sent, BUFFER_SIZE);
 
@@ -334,6 +353,8 @@ server_send_public_message(server_t *server, client_t *client)
         }
 
         memset(client->message, 0, BUFFER_SIZE);
+
+        server_mutex_unlock(server);
 }
 
 static void
