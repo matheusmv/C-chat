@@ -66,7 +66,7 @@ static server_t prv_server;
 void
 start_server(const uint16_t port)
 {
-        SOCKET s_socket = create_server_socket(port);
+        SOCKET s_socket = server_start_listening_on_port(port);
         if (!ISVALIDSOCKET(s_socket)) {
                 LOG_ERROR("create_server_socket() failed. %s", strerror(errno));
                 exit(EXIT_FAILURE);
@@ -384,12 +384,19 @@ server_disconnect_client(server_t *server, client_t *client)
 static void
 sigint_handler(int signum)
 {
-        if (prv_server.connected_clients > 0) {
-                LOG_WARNING("there are still users connected to the server.");
-        } else {
-                CLOSESOCKET(prv_server.tcp_socket);
-                prv_server.running = false;
-                server_mutex_destroy(&prv_server);
+        switch (signum)
+        {
+        case SIGINT:
+                if (prv_server.connected_clients > 0) {
+                        LOG_WARNING("there are still %d users connected to the server.", prv_server.connected_clients);
+                } else {
+                        CLOSESOCKET(prv_server.tcp_socket);
+                        prv_server.running = false;
+                        server_mutex_destroy(&prv_server);
+                }
+                break;
+        default:
+                break;
         }
 }
 
@@ -412,7 +419,7 @@ handle_connections(server_t *server)
         client_t new_client;
 
         while (server->running) {
-                SOCKET c_socket = accept_new_client(&server->tcp_socket, &client_details);
+                SOCKET c_socket = server_accept_new_client(&server->tcp_socket, &client_details);
                 if (!ISVALIDSOCKET(c_socket)) {
                         LOG_ERROR("accept_new_client() failed. %s", strerror(errno));
                         continue;

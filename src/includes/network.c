@@ -4,7 +4,7 @@
 #include <assert.h>
 
 SOCKET
-connect_to_server(const char *address, const uint16_t port)
+client_connect_to_server(const char *address, const uint16_t port)
 {
         SOCKET socketfd = 0;
         int status = 0;
@@ -31,10 +31,9 @@ connect_to_server(const char *address, const uint16_t port)
 }
 
 SOCKET
-create_server_socket(const uint16_t port)
+server_start_listening_on_port(const uint16_t port)
 {
         SOCKET socketfd = 0;
-        int status = 0;
 
         struct sockaddr_in server_details;
         memset(&server_details, 0, sizeof(server_details));
@@ -48,6 +47,7 @@ create_server_socket(const uint16_t port)
                 exit(EXIT_FAILURE);
         }
 
+        int status = 0;
         status = bind(socketfd, (struct sockaddr *) &server_details, sizeof(server_details));
         if (status < 0) {
                 LOG_ERROR("bind() failed. %s", strerror(errno));
@@ -60,18 +60,15 @@ create_server_socket(const uint16_t port)
                 exit(EXIT_FAILURE);
         }
 
-        LOG_INFO("server running on port %d", port);
+        LOG_INFO("server running on [%s:%d]", inet_ntoa(server_details.sin_addr), port);
 
         return socketfd;
 }
 
 SOCKET
-accept_new_client(SOCKET *server_socket, struct sockaddr_in *client_details)
+server_accept_new_client(SOCKET *server_socket, struct sockaddr_in *client_details)
 {
-        if (server_socket == NULL || client_details == NULL) {
-                LOG_ERROR("invalid parameters");
-                exit(EXIT_FAILURE);
-        }
+        assert(server_socket != NULL && client_details != NULL);
 
         memset(client_details, 0, sizeof(struct sockaddr_in));
 

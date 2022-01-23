@@ -107,7 +107,7 @@ get_time(char *dest, size_t dest_size)
         struct tm time_info;
 
         seconds = time(NULL);
-        localtime_r(&seconds, &time_info);
+        time_info = *localtime(&seconds);
         strftime(dest, dest_size, "%b %d %Y %X", &time_info);
 }
 

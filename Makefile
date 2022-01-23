@@ -1,6 +1,6 @@
 CC := gcc
 
-CFLAGS := -pedantic-errors -Wall -Werror
+CFLAGS := -pedantic-errors -Wall -Werror -Wextra -std=c11
 
 CLIENTSRCDIRS := src/includes/ src/client/
 SERVERSRCDIRS := src/includes/ src/server/
@@ -16,7 +16,7 @@ LFLAGS := -lpthread
 all: CFLAGS +=-O2
 all: release
 
-debug: CFLAGS +=-O0 -g
+debug: CFLAGS +=-O0 -ggdb
 debug: release
 
 release:

@@ -8,7 +8,7 @@ static void *client_recv_thr(void *);
 void
 start_client(const char *address, const uint16_t port, const char *username)
 {
-        SOCKET c_socket = connect_to_server(address, port);
+        SOCKET c_socket = client_connect_to_server(address, port);
 
         pthread_t sendthread, recvthread;
 
