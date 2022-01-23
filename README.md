@@ -17,19 +17,19 @@ chat utilizando sockets na linguagem de programação C.
 
        git clone https://github.com/matheusmv/C-chat.git && cd C-chat
 
-       gcc src/includes/*.c src/client/*.c -o client -lpthread
+       gcc -O2 src/includes/*.c src/client/*.c -o client -lpthread -DLCOLOR
 
-       gcc src/includes/*.c src/server/*.c -o server -lpthread
+       gcc -O2 src/includes/*.c src/server/*.c -o server -lpthread -DLCOLOR
 
 ## Executando o programa
 
 ### Servidor
 
-      ./server -p port
+      ./server -p <port>
 
 ### Cliente
 
-      ./client -a ip -p port -u username
+      ./client -a <IP-address> -p <port> -u <your-username>
 
  - Comandos:
 
@@ -43,6 +43,8 @@ chat utilizando sockets na linguagem de programação C.
 
       - enviar mensagem privada:
 
-            :send: -u username -m message
+            :send: -u <username> -m <message>
 
-      - mensagem pública: qualquer texto diferente dos comandos acima será enviado publicamente.
+      - mensagem pública:
+
+            qualquer texto diferente dos comandos acima será enviado publicamente.
