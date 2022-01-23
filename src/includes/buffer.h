@@ -1,6 +1,8 @@
 #ifndef _BUFFER_H
 #define _BUFFER_H
 
+/* src: https://github.com/reagent/buffer */
+
 #define __STDC_WANT_LIB_EXT2__ 1
 #define _GNU_SOURCE
 
