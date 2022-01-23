@@ -101,13 +101,16 @@ clogger_init(void)
 static void
 get_time(char *dest, size_t dest_size)
 {
-        assert(dest_size >= 22);
-
         time_t seconds;
         struct tm time_info;
 
         seconds = time(NULL);
+#if defined(_POSIX_SOURCE)
+        tzset();
+        localtime_r(&seconds, &time_info);
+#else
         time_info = *localtime(&seconds);
+#endif
         strftime(dest, dest_size, "%b %d %Y %X", &time_info);
 }
 
