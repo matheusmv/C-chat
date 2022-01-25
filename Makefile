@@ -5,8 +5,8 @@ CFLAGS := -pedantic-errors -Wall -Werror -Wextra -std=c11
 CLIENTSRCDIRS := src/includes/ src/client/
 SERVERSRCDIRS := src/includes/ src/server/
 
-CLIENTSRCS := $(shell find $(CLIENTSRCDIRS) -name *.c)
-SERVERSRCS := $(shell find $(SERVERSRCDIRS) -name *.c)
+CLIENTSRCS := $(shell find $(CLIENTSRCDIRS) -name '*.c')
+SERVERSRCS := $(shell find $(SERVERSRCDIRS) -name '*.c')
 
 CLIENTBIN := client
 SERVERBIN := server
